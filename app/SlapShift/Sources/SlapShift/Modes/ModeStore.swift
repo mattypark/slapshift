@@ -1,13 +1,14 @@
 // ModeStore — load/save modes from ~/Library/Application Support/SlapShift/modes.json.
 //
-// Why a file, not UserDefaults: modes are explicit user data; we want them human-readable,
-// portable (export/import in v1.1), and not subject to plist quirks. JSON is the right floor.
+// ObservableObject so SwiftUI views observe edits and re-render. Saves on every mutation
+// (modes are small, JSON write is microseconds, no point batching).
 
+import Combine
 import Foundation
 
-final class ModeStore {
+final class ModeStore: ObservableObject {
 
-    private(set) var modes: [Mode] = []
+    @Published private(set) var modes: [Mode] = []
 
     private let fileURL: URL
 
@@ -41,6 +42,14 @@ final class ModeStore {
         }
     }
 
+    /// Binding-style mutation used by SwiftUI. Replace the mode at index with mutated copy.
+    func binding(for id: UUID) -> (get: () -> Mode?, set: (Mode) -> Void) {
+        return (
+            { [weak self] in self?.modes.first { $0.id == id } },
+            { [weak self] mode in self?.update(mode) }
+        )
+    }
+
     func save() {
         do {
             let encoder = JSONEncoder()
@@ -48,7 +57,7 @@ final class ModeStore {
             let data = try encoder.encode(modes)
             try data.write(to: fileURL, options: .atomic)
         } catch {
-            NSLog("SlapShift: ModeStore save failed: \(error)")
+            print("SlapShift: ModeStore save failed: \(error)")
         }
     }
 }

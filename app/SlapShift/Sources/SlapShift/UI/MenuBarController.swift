@@ -12,8 +12,8 @@
 //   2 slaps → Apply
 //   3 slaps → Wind Down
 //   ---
-//   Settings...             (opens settings window — v2 stub for Weekend 3)
-//   Test 1 slap             (fires the slap callback manually so the user can verify wiring)
+//   Settings...
+//   Test ▶
 //   ---
 //   Quit SlapShift
 
@@ -28,6 +28,7 @@ final class MenuBarController {
     }
 
     var onQuit: (() -> Void)?
+    var onOpenSettings: (() -> Void)?
     var onTestSlap: ((Int) -> Void)?
 
     private let modeStore: ModeStore
@@ -44,7 +45,7 @@ final class MenuBarController {
             button.image = Self.icon(for: .armed)
             button.toolTip = "SlapShift — listening for slaps"
         }
-        statusItem.menu = buildMenu()
+        rebuildMenu()
     }
 
     func setState(_ state: State) {
@@ -68,7 +69,11 @@ final class MenuBarController {
         }
     }
 
-    // MARK: - Menu
+    /// Rebuilds the menu so mode names reflect the current ModeStore. Called on launch
+    /// and whenever the user edits a mode in the settings window.
+    func rebuildMenu() {
+        statusItem.menu = buildMenu()
+    }
 
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
@@ -87,7 +92,9 @@ final class MenuBarController {
         }
         menu.addItem(.separator())
 
-        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
+        let settings = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
+        settings.target = self
+        menu.addItem(settings)
 
         let testMenu = NSMenu(title: "Test")
         for count in 1...3 {
@@ -109,18 +116,11 @@ final class MenuBarController {
         quit.target = self
         menu.addItem(quit)
 
-        // Wire target for items that use self
-        for item in menu.items where item.action == #selector(openSettings) {
-            item.target = self
-        }
         return menu
     }
 
     @objc private func openSettings() {
-        // Weekend 3 wires the real settings window. For now: open the JSON in default editor.
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let modesFile = support.appendingPathComponent("SlapShift/modes.json")
-        NSWorkspace.shared.open(modesFile)
+        onOpenSettings?()
     }
 
     @objc private func testSlap(_ sender: NSMenuItem) {
@@ -132,16 +132,13 @@ final class MenuBarController {
     }
 
     // MARK: - Icons
-    //
-    // We use SF Symbols templated to the menu bar tint. The flash state inverts to a filled
-    // variant for ~180ms so the user gets sub-perceptual confirmation that the slap landed.
 
     private static func icon(for state: State) -> NSImage? {
         let name: String
         switch state {
-        case .armed:           name = "hand.tap"
-        case .flash:           name = "hand.tap.fill"
-        case .error:           name = "exclamationmark.triangle"
+        case .armed: name = "hand.tap"
+        case .flash: name = "hand.tap.fill"
+        case .error: name = "exclamationmark.triangle"
         }
         let image = NSImage(systemSymbolName: name, accessibilityDescription: "SlapShift")
         image?.isTemplate = true
