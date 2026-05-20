@@ -23,6 +23,7 @@ settings:
     # Developer Team ID — set this once you know it (or leave blank and set it
     # in Xcode > Signing & Capabilities; xcodegen will pick it up next regen).
     # DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: "R43H5332KH"
     CODE_SIGN_STYLE: Automatic
     ENABLE_HARDENED_RUNTIME: YES
 
