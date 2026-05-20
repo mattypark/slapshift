@@ -8,7 +8,7 @@
 //   - https://github.com/olvvier/apple-silicon-accelerometer
 //   - https://github.com/AbdullahFID/MacSlapApp
 //   - https://github.com/taigrr/spank
-// This file is an independent reimplementation, not a copy.
+// This file is an independent reimplementation, not a copy of the above. 
 //
 // Pipeline:
 //   1. IOServiceMatching("AppleSPUHIDDevice")
