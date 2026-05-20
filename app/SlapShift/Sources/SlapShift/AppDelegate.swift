@@ -51,6 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         classifier = SlapClassifier()
         classifier.slapThresholdG = prefs.slapThresholdG
+        classifier.windowSeconds = prefs.slapWindowSeconds
         classifier.onSlap = { [weak self] event in
             self?.handleSlap(event)
         }
@@ -59,6 +60,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         prefs.$slapThresholdG
             .sink { [weak self] newValue in
                 self?.classifier.slapThresholdG = newValue
+            }
+            .store(in: &cancellables)
+
+        // Live-bind the slap window slider so multi-slap timing updates without restart.
+        prefs.$slapWindowSeconds
+            .sink { [weak self] newValue in
+                self?.classifier.windowSeconds = newValue
             }
             .store(in: &cancellables)
 

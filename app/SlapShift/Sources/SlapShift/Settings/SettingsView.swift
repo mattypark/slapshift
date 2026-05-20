@@ -75,6 +75,29 @@ struct SettingsView: View {
             .background(Color(NSColor.controlBackgroundColor))
             .cornerRadius(12)
 
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Label("Slap window", systemImage: "timer")
+                    Spacer()
+                    Text(String(format: "%.0f ms", prefs.slapWindowSeconds * 1000))
+                        .font(.caption.monospaced())
+                        .foregroundColor(.secondary)
+                }
+                Slider(value: $prefs.slapWindowSeconds, in: 0.20...1.00, step: 0.05) {
+                    Text("Window")
+                } minimumValueLabel: {
+                    Text("Fast").font(.caption2).foregroundColor(.secondary)
+                } maximumValueLabel: {
+                    Text("Relaxed").font(.caption2).foregroundColor(.secondary)
+                }
+                Text("How long to wait after the first slap before firing the mode. Shorter = quicker action but you have to slap faster for 2/3. Default 400ms.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(12)
+
             HStack {
                 Label("Launch SlapShift at login", systemImage: "power")
                 Spacer()
