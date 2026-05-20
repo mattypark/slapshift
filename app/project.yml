@@ -1,0 +1,105 @@
+# xcodegen spec — regenerate the .xcodeproj after editing this file:
+#
+#   cd app && xcodegen generate
+#
+# This is the source of truth for the Xcode project. The .xcodeproj should be
+# regenerated, not edited by hand. If you change build settings in Xcode and
+# they get overwritten, move them here.
+
+name: SlapShift
+options:
+  bundleIdPrefix: com.matthewpark
+  deploymentTarget:
+    macOS: "13.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Developer Team ID — set this once you know it (or leave blank and set it
+    # in Xcode > Signing & Capabilities; xcodegen will pick it up next regen).
+    # DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_HARDENED_RUNTIME: YES
+
+targets:
+  SlapShift:
+    type: application
+    platform: macOS
+    sources:
+      - path: SlapShift/Sources/SlapShift
+        name: Sources
+      - path: SlapShift/Resources
+        name: Resources
+        optional: true
+        buildPhase:
+          copyFiles:
+            destination: resources
+    info:
+      path: SlapShift/Info.plist
+      properties:
+        LSUIElement: true
+        LSMinimumSystemVersion: "13.0"
+        NSHumanReadableCopyright: "Copyright © 2026 Matthew Park. All rights reserved."
+        NSAppleEventsUsageDescription: "SlapShift uses Apple Events to run Focus shortcuts when you slap your MacBook."
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleDisplayName: SlapShift
+        CFBundleURLTypes:
+          - CFBundleURLName: com.matthewpark.slapshift.license
+            CFBundleTypeRole: Viewer
+            CFBundleURLSchemes:
+              - slapshift
+    entitlements:
+      path: SlapShift/SlapShift.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.matthewpark.slapshift
+        PRODUCT_NAME: SlapShift
+        INFOPLIST_FILE: SlapShift/Info.plist
+        CODE_SIGN_ENTITLEMENTS: SlapShift/SlapShift.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        # No app sandbox: we need IOKit HID access and full NSWorkspace control.
+        # Hardened Runtime + Developer ID signing + notarization is the correct
+        # security posture for DMG distribution.
+        ENABLE_APP_SANDBOX: NO
+        COMBINE_HIDPI_IMAGES: YES
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+
+  SlapShiftTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: SlapShift/Tests/SlapShiftTests
+        name: Tests
+    dependencies:
+      - target: SlapShift
+    settings:
+      base:
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/SlapShift.app/Contents/MacOS/SlapShift"
+
+schemes:
+  SlapShift:
+    build:
+      targets:
+        SlapShift: all
+        SlapShiftTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - SlapShiftTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

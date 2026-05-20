@@ -112,4 +112,29 @@ final class SlapClassifierTests: XCTestCase {
 
         XCTAssertEqual(events.first?.count, 1)
     }
+
+    // MARK: - Cooldown: slap immediately after emit is suppressed
+    //
+    // The classifier should ignore samples for `cooldownSeconds` after firing an event,
+    // so a slap whose trailing samples spill past the window doesn't start a phantom
+    // second event before the user has actually lifted their hand.
+
+    func test_cooldown_suppressesImmediateRefire() {
+        // Fire a clean single slap.
+        let endT = injectSlap(startT: 0.0, peakG: 1.15)
+        classifier._forceEmitForTesting()
+        XCTAssertEqual(events.count, 1)
+        XCTAssertEqual(events.first?.count, 1)
+
+        // Now feed another slap that begins INSIDE the 150ms cooldown window.
+        // (Cooldown is measured from firstSlapAt + windowSeconds; emitNow sets lastEmitAt.)
+        // We start the second slap just 30ms after the first one would have emitted —
+        // that's deep inside the 150ms cooldown.
+        let secondStart = endT + 0.03
+        _ = injectSlap(startT: secondStart, peakG: 1.20)
+        classifier._forceEmitForTesting()
+
+        // No new event — the cooldown gate dropped the rising edge.
+        XCTAssertEqual(events.count, 1, "Cooldown should suppress slaps that arrive during the dead window")
+    }
 }

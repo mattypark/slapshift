@@ -19,6 +19,12 @@ final class ModeStore: ObservableObject {
         self.fileURL = dir.appendingPathComponent("modes.json")
     }
 
+    // Test-only initializer. Lets ModeStoreTests point at a temp file so unit tests
+    // don't trample the user's real ~/Library/Application Support/SlapShift/modes.json.
+    init(fileURL: URL) {
+        self.fileURL = fileURL
+    }
+
     func loadOrSeedDefaults() {
         if let data = try? Data(contentsOf: fileURL),
            let decoded = try? JSONDecoder().decode([Mode].self, from: data),

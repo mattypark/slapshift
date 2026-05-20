@@ -22,14 +22,19 @@ final class ActionExecutor {
 
     // MARK: - Apps
 
+    // Activate the FIRST app in the mode (so the user actually sees their workspace
+    // come up), but leave the rest in the background. This avoids focus-stealing
+    // mid-mode (e.g. Chrome stealing focus from VSCode 200ms after VSCode opened).
+    // The first app is the "anchor" of the mode — usually the editor or browser
+    // the user is going to start typing into immediately.
     private func openApps(_ bundleIDs: [String]) {
-        for bundleID in bundleIDs {
+        for (index, bundleID) in bundleIDs.enumerated() {
             guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else {
                 NSLog("SlapShift: cannot find app \(bundleID) — skipping")
                 continue
             }
             let config = NSWorkspace.OpenConfiguration()
-            config.activates = false  // don't fight the user for focus — just bring it up
+            config.activates = (index == 0)
             NSWorkspace.shared.openApplication(at: url, configuration: config) { _, error in
                 if let error = error {
                     NSLog("SlapShift: open \(bundleID) failed: \(error)")

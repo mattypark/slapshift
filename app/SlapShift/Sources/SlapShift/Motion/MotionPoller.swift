@@ -162,9 +162,9 @@ final class MotionPoller {
 
     private func handleReport(_ report: UnsafePointer<UInt8>, length: Int) {
         guard length >= 18,
-              let rx = readInt32LE(report, length: length, offset: 6),
-              let ry = readInt32LE(report, length: length, offset: 10),
-              let rz = readInt32LE(report, length: length, offset: 14)
+              let rx = Self.readInt32LE(report, length: length, offset: 6),
+              let ry = Self.readInt32LE(report, length: length, offset: 10),
+              let rz = Self.readInt32LE(report, length: length, offset: 14)
         else { return }
 
         let gx = Double(rx) / Self.scaleQ16
@@ -182,7 +182,8 @@ final class MotionPoller {
         onSample?(sample)
     }
 
-    private func readInt32LE(_ ptr: UnsafePointer<UInt8>, length: Int, offset: Int) -> Int32? {
+    // Internal (not private) so SlapShiftTests can exercise it directly.
+    static func readInt32LE(_ ptr: UnsafePointer<UInt8>, length: Int, offset: Int) -> Int32? {
         guard offset + 3 < length else { return nil }
         let b0 = UInt32(ptr[offset])
         let b1 = UInt32(ptr[offset + 1]) << 8
