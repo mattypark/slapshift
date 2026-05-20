@@ -1,0 +1,29 @@
+# Swift / Xcode
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.swp
+build/
+*.xcarchive
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.vercel/
+
+# Env files — per CLAUDE.md, never committed, never read
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Notarization artifacts
+*.dmg
+*.zip
