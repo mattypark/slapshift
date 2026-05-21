@@ -19,7 +19,12 @@
 
 import AppKit
 
-let delegate = AppDelegate()
-NSApplication.shared.delegate = delegate
-NSApplication.shared.setActivationPolicy(.accessory)
-NSApplication.shared.run()
+// AppDelegate is @MainActor; this entire top-level file runs on the main thread
+// at process start, but Swift's concurrency checker can't infer that. Wrap the
+// startup sequence in a MainActor.assumeIsolated block to satisfy it.
+MainActor.assumeIsolated {
+    let delegate = AppDelegate()
+    NSApplication.shared.delegate = delegate
+    NSApplication.shared.setActivationPolicy(.accessory)
+    NSApplication.shared.run()
+}

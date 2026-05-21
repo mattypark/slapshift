@@ -651,6 +651,31 @@ function NerdySection() {
 // =============================================================================
 
 function PriceSection() {
+  // Two CTAs by design:
+  //   1) Download DMG — free, no email gate. Paywall fires in-app after the
+  //      first real slap. This is the primary path for most people.
+  //   2) Buy License — for impulse buyers who want to pay before downloading.
+  //      Hits /api/checkout, redirects to Stripe. Success page hands back the key.
+  const [buying, setBuying] = useState(false);
+
+  async function onBuy() {
+    if (buying) return;
+    setBuying(true);
+    try {
+      const res = await fetch("/api/checkout", { method: "POST" });
+      const data: { url?: string; error?: string } = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setBuying(false);
+        alert("Couldn't start checkout. Please try again or email support@slapshift.app.");
+      }
+    } catch {
+      setBuying(false);
+      alert("Network error starting checkout. Please try again.");
+    }
+  }
+
   return (
     <section className="bg-[var(--cream-deeper)] py-28">
       <div className="max-w-3xl mx-auto px-8 text-center">
@@ -660,7 +685,7 @@ function PriceSection() {
             className="text-7xl md:text-8xl font-serif text-[var(--ink)] leading-none"
             style={{ fontFamily: "var(--font-serif)" }}
           >
-            $15.99
+            $9.99
           </span>
           <span className="font-mono-tracked text-xs uppercase tracking-[0.3em] text-[var(--mute)]">
             one-time
@@ -672,19 +697,29 @@ function PriceSection() {
         >
           Less than a sad desk lunch.
           <br />
-          <em>50% off</em> if you post a slap video.
+          <em>Try free</em> — pay when you're hooked.
         </p>
         <p className="font-mono-tracked text-xs text-[var(--mute)] mb-10 max-w-md mx-auto leading-relaxed">
           Requires an Apple Silicon MacBook (M1 or newer) and a willingness
-          to hit expensive things. Refunds within 14 days, no questions.
+          to hit expensive things. All sales final, no refunds.
         </p>
-        <a
-          href="/downloads/SlapShift-0.1.0.dmg"
-          className="group inline-flex items-center gap-3 bg-[var(--ink)] text-[var(--cream)] px-8 py-4 font-mono-tracked text-xs uppercase tracking-[0.25em] hover:bg-[var(--accent)] transition-colors"
-        >
-          <DownloadIcon />
-          <span>Download for macOS</span>
-        </a>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <a
+            href="/downloads/SlapShift-0.1.0.dmg"
+            className="group inline-flex items-center gap-3 bg-[var(--ink)] text-[var(--cream)] px-8 py-4 font-mono-tracked text-xs uppercase tracking-[0.25em] hover:bg-[var(--accent)] transition-colors"
+          >
+            <DownloadIcon />
+            <span>Download for macOS</span>
+          </a>
+          <button
+            type="button"
+            onClick={onBuy}
+            disabled={buying}
+            className="inline-flex items-center gap-3 border border-[var(--ink)] text-[var(--ink)] px-8 py-4 font-mono-tracked text-xs uppercase tracking-[0.25em] hover:bg-[var(--ink)] hover:text-[var(--cream)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {buying ? "Opening Stripe…" : "Buy license — $9.99"}
+          </button>
+        </div>
         <div className="font-mono-tracked text-[10px] uppercase tracking-[0.3em] text-[var(--mute)] mt-4">
           v0.1.0 · 4.2 MB · Apple Silicon · Updated May 2026
         </div>

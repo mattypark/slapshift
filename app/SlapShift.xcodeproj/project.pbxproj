@@ -8,16 +8,24 @@
 
 /* Begin PBXBuildFile section */
 		071B16AEA7F8EA694C4057E0 /* MotionPoller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 602FF5D2381F25350A9A1F40 /* MotionPoller.swift */; };
+		147B1853EA69CEE0545CCA7B /* ShortcutCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2951DF1FB48A308B7DDB621 /* ShortcutCatalog.swift */; };
 		3AB31EBF95A04BD67D4030CC /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B695DE059AA81AC843AE133 /* MenuBarController.swift */; };
 		3CB980B0B79BF7DC89C48649 /* ModeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A67BF3C4D852AB02923C29FA /* ModeStore.swift */; };
+		40C09B4D1FBA6E55F1FB5886 /* OnboardingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B63CA65D6847B53A8A5054AA /* OnboardingWindow.swift */; };
 		440BDDB6457BC4EC1468871B /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4E0FCEE9B87203FAEF5C7A4 /* main.swift */; };
 		46009268B5479C77F852C0AF /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EB617ED1A8F2F00F8FFF23C /* SettingsView.swift */; };
 		4D9641991FEEC1699AD13DA1 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBA3C8F9E488228008AF270D /* OnboardingView.swift */; };
+		54FB0238AA4653CF60332120 /* Sslap.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 8997A808B10C110842F39938 /* Sslap.png */; };
 		559123FCDED5841A68DD3350 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F48B29DEA65CFF12D99954D /* LaunchAtLogin.swift */; };
+		59752B7582FD709A65687115 /* MachineId.swift in Sources */ = {isa = PBXBuildFile; fileRef = F18671B95C3F7CEC26A14E84 /* MachineId.swift */; };
 		66733A134BDC739D68CCE1FF /* ModeEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 925DAD37D67A6500405DEA65 /* ModeEditorView.swift */; };
+		77D7A52C9BF7FADAEEFC2F3F /* LicenseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C891409186F26F4362ED8F7 /* LicenseManager.swift */; };
 		7A7CA335792EE633BFFAD68F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9002E979FA5B45DEC7C7A231 /* AppDelegate.swift */; };
 		8269FBA989EBAD0D6865B886 /* MotionPollerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84234D308B08BFF229ACCB89 /* MotionPollerTests.swift */; };
+		A204194BADD6F71A5086A4E6 /* LicenseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC36EEE4FF27A04F86D8B277 /* LicenseSheet.swift */; };
 		A35EE61FBBB36239BEA83D7E /* SlapClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A32CE4FC92640735A2F59F5 /* SlapClassifierTests.swift */; };
+		AA0F9BD6A9FBA933FCA06963 /* LicenseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCC82794C788A56DE0EF81A6 /* LicenseStore.swift */; };
+		B005FDDFE8055A716A4F8C1A /* README.md in CopyFiles */ = {isa = PBXBuildFile; fileRef = 12D59EB33DDB463713779E16 /* README.md */; };
 		B7E2939CC971C0FBE26F36B9 /* ModeStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F27113984C8660446039CD96 /* ModeStoreTests.swift */; };
 		BB19E488BC8EC53FC99FD1DB /* SlapClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A3DFB51F4012E086C4EA9 /* SlapClassifier.swift */; };
 		CFD042B1155FB9A9099A9C63 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = E414BDEB5C04907D737212F8 /* AppPreferences.swift */; };
@@ -25,6 +33,8 @@
 		D37180A9E35019402FD23D67 /* DefaultModes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4032B66080C8B624E124F997 /* DefaultModes.swift */; };
 		E35EE2B678CF5656DE9CCA00 /* Mode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A556487E70804D3A12DD3B1 /* Mode.swift */; };
 		E58B17FB21DC6231BC7B4BCC /* AppPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB23B055E750E9F508D51FBC /* AppPicker.swift */; };
+		E77E1B8E14CE3EB75414369F /* ShortcutInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = A47E0AAC9D67D7973973800F /* ShortcutInstaller.swift */; };
+		EFFCCA2AB60C593D04FDD145 /* LicenseValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C759EF5AF9C852909AAEC6CB /* LicenseValidator.swift */; };
 		FF117B94FFCFCC3FFE22B901 /* SettingsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 693CBA3A98E239181250E394 /* SettingsWindow.swift */; };
 		FF4FE81DA9755B6526BCD718 /* ActionExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43E410050D64CB75A58967DF /* ActionExecutor.swift */; };
 /* End PBXBuildFile section */
@@ -39,8 +49,24 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		87736D29287322CDABFC89BE /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				B005FDDFE8055A716A4F8C1A /* README.md in CopyFiles */,
+				54FB0238AA4653CF60332120 /* Sslap.png in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		0F48B29DEA65CFF12D99954D /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
+		12D59EB33DDB463713779E16 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		1C891409186F26F4362ED8F7 /* LicenseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseManager.swift; sourceTree = "<group>"; };
 		1EB617ED1A8F2F00F8FFF23C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		3A3E2FB2A9220881AA9A2DE3 /* SlapShift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SlapShift.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B695DE059AA81AC843AE133 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
@@ -51,17 +77,25 @@
 		693CBA3A98E239181250E394 /* SettingsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindow.swift; sourceTree = "<group>"; };
 		6A32CE4FC92640735A2F59F5 /* SlapClassifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlapClassifierTests.swift; sourceTree = "<group>"; };
 		84234D308B08BFF229ACCB89 /* MotionPollerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionPollerTests.swift; sourceTree = "<group>"; };
+		8997A808B10C110842F39938 /* Sslap.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Sslap.png; sourceTree = "<group>"; };
 		8A556487E70804D3A12DD3B1 /* Mode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mode.swift; sourceTree = "<group>"; };
 		9002E979FA5B45DEC7C7A231 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		925DAD37D67A6500405DEA65 /* ModeEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeEditorView.swift; sourceTree = "<group>"; };
+		A47E0AAC9D67D7973973800F /* ShortcutInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutInstaller.swift; sourceTree = "<group>"; };
 		A4E0FCEE9B87203FAEF5C7A4 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		A67BF3C4D852AB02923C29FA /* ModeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeStore.swift; sourceTree = "<group>"; };
+		AC36EEE4FF27A04F86D8B277 /* LicenseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseSheet.swift; sourceTree = "<group>"; };
+		B63CA65D6847B53A8A5054AA /* OnboardingWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWindow.swift; sourceTree = "<group>"; };
 		C43A3DFB51F4012E086C4EA9 /* SlapClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlapClassifier.swift; sourceTree = "<group>"; };
+		C759EF5AF9C852909AAEC6CB /* LicenseValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseValidator.swift; sourceTree = "<group>"; };
 		C76C1B96DA7D42E133BDD14C /* SlapShiftTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SlapShiftTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB23B055E750E9F508D51FBC /* AppPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPicker.swift; sourceTree = "<group>"; };
+		D2951DF1FB48A308B7DDB621 /* ShortcutCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutCatalog.swift; sourceTree = "<group>"; };
 		E414BDEB5C04907D737212F8 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
+		F18671B95C3F7CEC26A14E84 /* MachineId.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineId.swift; sourceTree = "<group>"; };
 		F27113984C8660446039CD96 /* ModeStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeStoreTests.swift; sourceTree = "<group>"; };
 		FBA3C8F9E488228008AF270D /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		FCC82794C788A56DE0EF81A6 /* LicenseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -85,6 +119,7 @@
 		5D2365778B2B0A706B291365 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				8997A808B10C110842F39938 /* Sslap.png */,
 				98DEE559EF64C961829C0DA3 /* DefaultShortcuts */,
 			);
 			name = Resources;
@@ -105,6 +140,8 @@
 				9002E979FA5B45DEC7C7A231 /* AppDelegate.swift */,
 				A4E0FCEE9B87203FAEF5C7A4 /* main.swift */,
 				E6D7B6D15B76D4E3F180B83E /* Actions */,
+				CBBBE108923F6059DB1C9D14 /* Focus */,
+				A36A50859105C2DF53D70398 /* License */,
 				B592CBFA361863BDA9057DB6 /* Modes */,
 				B1D8D9414A7815B2BAC0994C /* Motion */,
 				B13DF4727DA122A4B1900391 /* Settings */,
@@ -117,8 +154,21 @@
 		98DEE559EF64C961829C0DA3 /* DefaultShortcuts */ = {
 			isa = PBXGroup;
 			children = (
+				12D59EB33DDB463713779E16 /* README.md */,
 			);
 			path = DefaultShortcuts;
+			sourceTree = "<group>";
+		};
+		A36A50859105C2DF53D70398 /* License */ = {
+			isa = PBXGroup;
+			children = (
+				1C891409186F26F4362ED8F7 /* LicenseManager.swift */,
+				AC36EEE4FF27A04F86D8B277 /* LicenseSheet.swift */,
+				FCC82794C788A56DE0EF81A6 /* LicenseStore.swift */,
+				C759EF5AF9C852909AAEC6CB /* LicenseValidator.swift */,
+				F18671B95C3F7CEC26A14E84 /* MachineId.swift */,
+			);
+			path = License;
 			sourceTree = "<group>";
 		};
 		B13DF4727DA122A4B1900391 /* Settings */ = {
@@ -162,6 +212,15 @@
 			path = Sources;
 			sourceTree = "<group>";
 		};
+		CBBBE108923F6059DB1C9D14 /* Focus */ = {
+			isa = PBXGroup;
+			children = (
+				D2951DF1FB48A308B7DDB621 /* ShortcutCatalog.swift */,
+				A47E0AAC9D67D7973973800F /* ShortcutInstaller.swift */,
+			);
+			path = Focus;
+			sourceTree = "<group>";
+		};
 		CEA5A1E66C707ABD13CD3B42 /* SlapShift */ = {
 			isa = PBXGroup;
 			children = (
@@ -196,6 +255,7 @@
 			children = (
 				3B695DE059AA81AC843AE133 /* MenuBarController.swift */,
 				FBA3C8F9E488228008AF270D /* OnboardingView.swift */,
+				B63CA65D6847B53A8A5054AA /* OnboardingWindow.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -226,6 +286,7 @@
 			buildConfigurationList = F80AA1C0F17F5E2172226897 /* Build configuration list for PBXNativeTarget "SlapShift" */;
 			buildPhases = (
 				E390DC3D0CF892B29C2F42D1 /* Sources */,
+				87736D29287322CDABFC89BE /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -249,11 +310,9 @@
 				TargetAttributes = {
 					32E894DCF64B386E96673DC6 = {
 						DevelopmentTeam = R43H5332KH;
-						ProvisioningStyle = Automatic;
 					};
 					B6982815773D8DD851B0CD97 = {
 						DevelopmentTeam = R43H5332KH;
-						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -299,14 +358,22 @@
 				D37180A9E35019402FD23D67 /* DefaultModes.swift in Sources */,
 				D27B4FF0936F6FF75B12FF36 /* InstalledApps.swift in Sources */,
 				559123FCDED5841A68DD3350 /* LaunchAtLogin.swift in Sources */,
+				77D7A52C9BF7FADAEEFC2F3F /* LicenseManager.swift in Sources */,
+				A204194BADD6F71A5086A4E6 /* LicenseSheet.swift in Sources */,
+				AA0F9BD6A9FBA933FCA06963 /* LicenseStore.swift in Sources */,
+				EFFCCA2AB60C593D04FDD145 /* LicenseValidator.swift in Sources */,
+				59752B7582FD709A65687115 /* MachineId.swift in Sources */,
 				3AB31EBF95A04BD67D4030CC /* MenuBarController.swift in Sources */,
 				E35EE2B678CF5656DE9CCA00 /* Mode.swift in Sources */,
 				66733A134BDC739D68CCE1FF /* ModeEditorView.swift in Sources */,
 				3CB980B0B79BF7DC89C48649 /* ModeStore.swift in Sources */,
 				071B16AEA7F8EA694C4057E0 /* MotionPoller.swift in Sources */,
 				4D9641991FEEC1699AD13DA1 /* OnboardingView.swift in Sources */,
+				40C09B4D1FBA6E55F1FB5886 /* OnboardingWindow.swift in Sources */,
 				46009268B5479C77F852C0AF /* SettingsView.swift in Sources */,
 				FF117B94FFCFCC3FFE22B901 /* SettingsWindow.swift in Sources */,
+				147B1853EA69CEE0545CCA7B /* ShortcutCatalog.swift in Sources */,
+				E77E1B8E14CE3EB75414369F /* ShortcutInstaller.swift in Sources */,
 				BB19E488BC8EC53FC99FD1DB /* SlapClassifier.swift in Sources */,
 				440BDDB6457BC4EC1468871B /* main.swift in Sources */,
 			);
@@ -375,7 +442,8 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -396,6 +464,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
@@ -436,6 +505,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
@@ -476,12 +546,13 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.matthewpark.SlapShiftTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.matthewpark.slapshift.tests;
 				SDKROOT = macosx;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SlapShift.app/Contents/MacOS/SlapShift";
 			};
@@ -492,12 +563,13 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.matthewpark.SlapShiftTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.matthewpark.slapshift.tests;
 				SDKROOT = macosx;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SlapShift.app/Contents/MacOS/SlapShift";
 			};

@@ -14,8 +14,9 @@ struct ModeEditorView: View {
     @State private var showingQuitPicker = false
     @State private var newURL: String = ""
 
-    /// Common macOS Focus modes. User can type any custom Focus name too.
-    private let focusSuggestions = ["Do Not Disturb", "Work", "Personal", "Sleep", "Reading", "Fitness", "Gaming", "Driving"]
+    /// Names of Focus modes the user has wired up via SlapShift's shortcut helpers.
+    /// Refreshed via ShortcutCatalog on appear and on demand.
+    @State private var availableFocusNames: [String] = []
 
     private var mode: Mode? {
         modeStore.modes.first(where: { $0.id == modeID })
@@ -199,35 +200,56 @@ struct ModeEditorView: View {
     }
 
     private func focusSection(_ mode: Mode) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Focus mode to enter (optional)", systemImage: "moon.circle")
-                .font(.headline)
+        // The picker offers (none) + every installed SlapShift focus-helper shortcut.
+        // If the stored focusModeName doesn't match any installed shortcut, we still
+        // show it (so the user can SEE the orphaned selection) with a warning icon.
+        let stored = mode.focusModeName
+        let isOrphaned = stored != nil && !availableFocusNames.contains(stored!)
 
+        return VStack(alignment: .leading, spacing: 8) {
             HStack {
-                TextField("e.g. Do Not Disturb", text: Binding(
-                    get: { mode.focusModeName ?? "" },
-                    set: { newVal in
-                        commit { $0.focusModeName = newVal.isEmpty ? nil : newVal }
-                    }
-                ))
-                .textFieldStyle(.roundedBorder)
-
-                Menu("Suggestions") {
-                    Button("(none)") {
-                        commit { $0.focusModeName = nil }
-                    }
-                    ForEach(focusSuggestions, id: \.self) { suggestion in
-                        Button(suggestion) {
-                            commit { $0.focusModeName = suggestion }
-                        }
-                    }
+                Label("Focus mode to enter (optional)", systemImage: "moon.circle")
+                    .font(.headline)
+                Spacer()
+                Button {
+                    availableFocusNames = ShortcutCatalog.availableFocusNames()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
                 }
-                .frame(width: 130)
+                .buttonStyle(.borderless)
+                .help("Rescan installed Focus shortcuts")
             }
 
-            Text("Requires SlapShift's first-run Shortcut installer (Weekend 3 follow-up). Without it, Focus changes silently no-op.")
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            Picker("", selection: Binding(
+                get: { stored ?? "" },
+                set: { newVal in
+                    commit { $0.focusModeName = newVal.isEmpty ? nil : newVal }
+                }
+            )) {
+                Text("(none)").tag("")
+                ForEach(availableFocusNames, id: \.self) { name in
+                    Text(name).tag(name)
+                }
+                // Surface orphaned values so the user notices a broken wiring.
+                if isOrphaned, let stored = stored {
+                    Text("⚠ \(stored) (shortcut not installed)").tag(stored)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+
+            if availableFocusNames.isEmpty {
+                Text("No Focus shortcuts found. Install the SlapShift focus helpers from the first-run onboarding (or create shortcuts named `SlapShift: Set Focus to <name>` in Shortcuts.app).")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            } else if isOrphaned {
+                Text("This mode references a Focus shortcut that's not installed. The focus change will silently no-op until you install it.")
+                    .font(.caption2)
+                    .foregroundColor(.orange)
+            }
+        }
+        .onAppear {
+            availableFocusNames = ShortcutCatalog.availableFocusNames()
         }
     }
 }

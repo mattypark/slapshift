@@ -82,6 +82,16 @@ fi
 echo "--- [3/6] create DMG ---"
 "$ROOT/ops/create-dmg.sh" "$APP_PATH" "$DMG_PATH"
 
+# Sign the DMG container itself (the .app inside is already signed by xcodebuild).
+# Without this the .app passes Gatekeeper but the DMG container shows as
+# "unsigned" in spctl --type install. --timestamp is required for notarization.
+SIGN_ID="$(security find-identity -v -p codesigning | awk -F'"' '/Developer ID Application/ {print $2; exit}')"
+if [ -z "$SIGN_ID" ]; then
+    echo "error: no Developer ID Application cert in keychain" >&2
+    exit 1
+fi
+codesign --sign "$SIGN_ID" --timestamp "$DMG_PATH"
+
 # 4. Notarize
 echo "--- [4/6] notarize (this can take 2-5 minutes) ---"
 xcrun notarytool submit "$DMG_PATH" \
