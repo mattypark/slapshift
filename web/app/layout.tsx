@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Newsreader, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import SmoothScroll from "./components/SmoothScroll";
 
 const newsreader = Newsreader({
   variable: "--font-serif",
@@ -31,7 +32,9 @@ export default function RootLayout({
       lang="en"
       className={`${newsreader.variable} ${jetbrainsMono.variable} antialiased`}
     >
-      <body>{children}</body>
+      <body>
+        <SmoothScroll>{children}</SmoothScroll>
+      </body>
     </html>
   );
 }

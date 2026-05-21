@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Reveal from "./components/Reveal";
 
 // =============================================================================
 // SlapShift landing — single café scene.
@@ -70,12 +71,24 @@ export default function Landing() {
           Alternating left/center/right alignment — NOT a card stack.
           ============================================================ */}
 
-      <ModesSection />
-      <AlsoSection />
-      <NerdySection />
-      <PriceSection />
-      <FaqSection />
-      <Footer />
+      <Reveal>
+        <ModesSection />
+      </Reveal>
+      <Reveal>
+        <AlsoSection />
+      </Reveal>
+      <Reveal>
+        <NerdySection />
+      </Reveal>
+      <Reveal>
+        <PriceSection />
+      </Reveal>
+      <Reveal>
+        <FaqSection />
+      </Reveal>
+      <Reveal>
+        <Footer />
+      </Reveal>
     </>
   );
 }
