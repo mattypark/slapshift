@@ -4,7 +4,21 @@ import "server-only";
 import { Resend } from "resend";
 import { env } from "./env";
 
-export const resend = new Resend(env.RESEND_API_KEY);
+// Lazy: see stripe.ts for the rationale.
+let instance: Resend | null = null;
+
+function getResend(): Resend {
+  if (!instance) {
+    instance = new Resend(env.RESEND_API_KEY);
+  }
+  return instance;
+}
+
+export const resend = new Proxy({} as Resend, {
+  get(_target, prop) {
+    return Reflect.get(getResend(), prop, getResend());
+  },
+});
 
 export function licenseEmail(opts: { key: string; deepLink: string }) {
   const { key, deepLink } = opts;
