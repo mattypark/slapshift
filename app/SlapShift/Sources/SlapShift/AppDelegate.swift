@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var licenseSheet: LicenseSheet?
     private var permissionPollTimer: Timer?
     private var motionRunning: Bool = false
+    private var menuBarInstalled: Bool = false
     private var cancellables: Set<AnyCancellable> = []
 
     /// UserDefaults flag — flipped once the user finishes the onboarding flow.
@@ -55,14 +56,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             print("Test: simulating \(count) slap(s)")
             self?.handleSlap(SlapEvent(count: count, peakG: 1.20, timestamp: 0))
         }
-        menuBar.install()
 
         // Rebuild the menu when modes change so "1 slap → Coding" labels stay accurate.
         modeStore.$modes
-            .sink { [weak self] _ in self?.menuBar.rebuildMenu() }
+            .sink { [weak self] _ in
+                guard let self = self, self.menuBarInstalled else { return }
+                self.menuBar.rebuildMenu()
+            }
             .store(in: &cancellables)
 
-        print("Menu bar icon installed (look for hand.tap symbol top-right)")
+        // Menu bar icon stays hidden until the user finishes onboarding AND has
+        // an active license. Until then there are no controls (Settings, Test,
+        // Quit) reachable from the menu bar — the user is gated through the
+        // onboarding window first. installMenuBarIfReady() is the one place
+        // that flips the icon on.
+        installMenuBarIfReady()
+        licenseManager.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.installMenuBarIfReady() }
+            .store(in: &cancellables)
 
         classifier = SlapClassifier()
         classifier.slapThresholdG = prefs.slapThresholdG
@@ -93,13 +105,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             try motion.start()
             motionRunning = true
-            menuBar.setState(.armed)
+            if menuBarInstalled {
+                menuBar.setState(.armed)
+            }
             print("Motion poller started — slap your MacBook to fire a mode")
             print("Open Settings from the menu bar icon to customize modes")
         } catch {
             print("ERROR: motion start failed: \(error.localizedDescription)")
             print("  → likely Input Monitoring permission needed. Check System Settings.")
-            menuBar.setState(.error(error.localizedDescription))
+            if menuBarInstalled {
+                menuBar.setState(.error(error.localizedDescription))
+            }
         }
 
         // Onboarding gate — runs AFTER the full app stack is wired so the test-slap
@@ -151,9 +167,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The slap pipeline routes the next slap to `onboardingState.testSlapDetected` instead of
     /// firing a mode, so the user can confirm the sensor works without their workspace transforming.
     private func presentOnboarding() {
-        let state = OnboardingState()
+        let state = OnboardingState(authService: StubAuthService())
 
-        // Step 2 — Input Monitoring. Open the pane, then poll motion.start() until it succeeds.
+        // Permission step — open the pane, then poll motion.start() until it succeeds.
         state.openInputMonitoringSettings = { [weak self] in
             self?.openInputMonitoringPane()
             self?.startPermissionPolling()
@@ -161,23 +177,75 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Reflect current permission state immediately — motion may already be running.
         state.permissionGranted = motionRunning
 
-        // Step 3 — Shortcuts. Run the installer; mark installed if anything shipped.
-        // Zero bundled files is also "done" (it's the no-op case) — user can build shortcuts by hand.
+        // Shortcuts step — run the installer; mark installed when bundled files are
+        // handed off to Shortcuts.app. Zero bundled files is also "done" (no-op case).
         state.installDefaultShortcuts = { [weak state] in
             let count = ShortcutInstaller.installBundledShortcuts()
             print("Onboarding: opened \(count) bundled shortcut file(s) for install confirmation")
             state?.shortcutsInstalled = true
         }
 
+        // Paywall step — "Buy now" routes to Stripe Checkout in the user's browser.
+        // We don't open an in-app webview; Stripe's hosted checkout is the trusted
+        // payment surface and the redirect back to slapshift://license activates
+        // the key automatically once the webhook completes.
+        state.openCheckout = { [weak state] in
+            let email = state?.email.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            var comps = URLComponents(string: "https://slapshift.app/api/checkout")!
+            if !email.isEmpty {
+                comps.queryItems = [URLQueryItem(name: "email", value: email)]
+            }
+            if let url = comps.url {
+                NSWorkspace.shared.open(url)
+            }
+        }
+
+        // Paywall "I already have a license" — open the existing manual-entry sheet.
+        state.openLicenseSheet = { [weak self] in
+            self?.presentLicenseSheet(prefilling: nil)
+        }
+
         onboardingState = state
         onboardingWindow = OnboardingWindow(state: state, onFinish: { [weak self] in
             self?.onboardingComplete = true
+            self?.persistOnboardingProfile(state)
             self?.onboardingState = nil
             self?.onboardingWindow = nil
             self?.stopPermissionPolling()
+            // Once onboarding is done, re-evaluate whether the menu bar icon
+            // should appear. It only appears once they ALSO have a license.
+            self?.installMenuBarIfReady()
             print("Onboarding complete")
         })
         onboardingWindow?.show()
+    }
+
+    /// Install the menu bar icon if and only if onboarding has been completed
+    /// AND the user has an active license. Until both conditions are true the
+    /// app has no visible surface other than the onboarding window — slaps are
+    /// silently ignored, the icon is absent, and there's no Settings/Test menu.
+    /// Safe to call repeatedly; the first satisfying call wins and later calls
+    /// are no-ops.
+    private func installMenuBarIfReady() {
+        guard !menuBarInstalled,
+              onboardingComplete,
+              licenseManager.state.isLicensed else { return }
+        menuBar.install()
+        menuBarInstalled = true
+        if motionRunning {
+            menuBar.setState(.armed)
+        }
+        print("Menu bar icon installed (look for hand.tap symbol top-right)")
+    }
+
+    /// Save the lightweight onboarding profile (name, email, usage tags) to
+    /// UserDefaults so it survives relaunch and Phase 2 can sync it to Supabase.
+    private func persistOnboardingProfile(_ state: OnboardingState) {
+        let defaults = UserDefaults.standard
+        defaults.set(state.name, forKey: "onboarding.name")
+        defaults.set(state.email, forKey: "onboarding.email")
+        defaults.set(state.provider?.rawValue, forKey: "onboarding.provider")
+        defaults.set(Array(state.usage), forKey: "onboarding.usage")
     }
 
     /// Open System Settings directly to the Input Monitoring pane (Privacy & Security).
@@ -198,7 +266,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 try self.motion.start()
                 self.motionRunning = true
-                self.menuBar.setState(.armed)
+                if self.menuBarInstalled {
+                    self.menuBar.setState(.armed)
+                }
                 state.permissionGranted = true
                 self.stopPermissionPolling()
                 print("Onboarding: motion permission confirmed")
@@ -214,26 +284,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleSlap(_ event: SlapEvent) {
-        menuBar.flash()
-
         // If onboarding is active and on the test-slap step, swallow the slap to confirm
-        // the sensor works — don't fire a real mode mid-tutorial. Once the user finishes
-        // onboarding, slaps resume normal mode execution.
+        // the sensor works — don't fire a real mode mid-tutorial. Flash the icon ONLY
+        // if it's actually visible (i.e. user already finished onboarding once before,
+        // which shouldn't happen here, but guard anyway).
         if let state = onboardingState, !state.testSlapDetected {
             state.testSlapDetected = true
             print("Onboarding: test slap detected (\(event.count) slap(s) @ \(String(format: "%.2f", event.peakG))g)")
             return
         }
 
-        // Paywall gate. The first real slap from an unlicensed user opens the
-        // purchase + key entry sheet instead of firing a mode. Same UX shape as
-        // the onboarding intercept above — swallow the slap, present the prompt,
-        // resume normal behavior once they buy/activate (or dismiss).
-        if !licenseManager.state.isLicensed {
-            print("Paywall: slap intercepted, license not active")
-            presentLicenseSheet(prefilling: nil)
+        // Hard gate. The app does NOTHING — no flash, no popup, no mode — until
+        // the user has both completed onboarding AND activated a license. The
+        // paywall lives inside the onboarding flow itself, so an unlicensed
+        // user who hasn't finished onboarding will simply see no response from
+        // their slaps until they finish + buy. This matches the user's spec:
+        // "it shouldn't work at all until... I finish the onboarding and
+        // actually buy it."
+        guard onboardingComplete, licenseManager.state.isLicensed else {
             return
         }
+
+        menuBar.flash()
 
         guard let mode = modeStore.mode(forSlapCount: event.count) else {
             print("⚠️  \(event.count) slap(s) detected but no mode bound — ignoring")

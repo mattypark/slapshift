@@ -15,6 +15,9 @@ const required = [
   "RESEND_API_KEY",
   "RESEND_FROM_EMAIL",
   "LICENSE_HMAC_SECRET",
+  // Server-only — read by /download route, never sent to the browser bundle.
+  // This keeps the underlying file host (GitHub Releases / R2 / etc.) opaque.
+  "DMG_URL",
 ] as const;
 
 type Required = (typeof required)[number];
@@ -42,7 +45,3 @@ export const env = new Proxy({} as Record<Required, string>, {
   },
 });
 
-// Optional (never throws):
-export const optionalEnv = {
-  dmgUrl: process.env.NEXT_PUBLIC_DMG_URL ?? "",
-};

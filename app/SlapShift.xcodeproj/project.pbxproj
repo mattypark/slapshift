@@ -19,8 +19,10 @@
 		559123FCDED5841A68DD3350 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F48B29DEA65CFF12D99954D /* LaunchAtLogin.swift */; };
 		59752B7582FD709A65687115 /* MachineId.swift in Sources */ = {isa = PBXBuildFile; fileRef = F18671B95C3F7CEC26A14E84 /* MachineId.swift */; };
 		66733A134BDC739D68CCE1FF /* ModeEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 925DAD37D67A6500405DEA65 /* ModeEditorView.swift */; };
+		698B9BE1ECF902158B89FE43 /* AppIcon.icns in CopyFiles */ = {isa = PBXBuildFile; fileRef = 32BF8BD0127D963CB65570C8 /* AppIcon.icns */; };
 		77D7A52C9BF7FADAEEFC2F3F /* LicenseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C891409186F26F4362ED8F7 /* LicenseManager.swift */; };
 		7A7CA335792EE633BFFAD68F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9002E979FA5B45DEC7C7A231 /* AppDelegate.swift */; };
+		8125486297B2B0FB61225735 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33680BC0FB74B4EBFF473B49 /* AuthService.swift */; };
 		8269FBA989EBAD0D6865B886 /* MotionPollerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84234D308B08BFF229ACCB89 /* MotionPollerTests.swift */; };
 		A204194BADD6F71A5086A4E6 /* LicenseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC36EEE4FF27A04F86D8B277 /* LicenseSheet.swift */; };
 		A35EE61FBBB36239BEA83D7E /* SlapClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A32CE4FC92640735A2F59F5 /* SlapClassifierTests.swift */; };
@@ -35,6 +37,7 @@
 		E58B17FB21DC6231BC7B4BCC /* AppPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB23B055E750E9F508D51FBC /* AppPicker.swift */; };
 		E77E1B8E14CE3EB75414369F /* ShortcutInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = A47E0AAC9D67D7973973800F /* ShortcutInstaller.swift */; };
 		EFFCCA2AB60C593D04FDD145 /* LicenseValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C759EF5AF9C852909AAEC6CB /* LicenseValidator.swift */; };
+		FE7C27E12DC8C5B200913925 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08EE4E57BA4FD6FE0E89EB5C /* Theme.swift */; };
 		FF117B94FFCFCC3FFE22B901 /* SettingsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 693CBA3A98E239181250E394 /* SettingsWindow.swift */; };
 		FF4FE81DA9755B6526BCD718 /* ActionExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43E410050D64CB75A58967DF /* ActionExecutor.swift */; };
 /* End PBXBuildFile section */
@@ -56,6 +59,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				698B9BE1ECF902158B89FE43 /* AppIcon.icns in CopyFiles */,
 				B005FDDFE8055A716A4F8C1A /* README.md in CopyFiles */,
 				54FB0238AA4653CF60332120 /* Sslap.png in CopyFiles */,
 			);
@@ -64,10 +68,13 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		08EE4E57BA4FD6FE0E89EB5C /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		0F48B29DEA65CFF12D99954D /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		12D59EB33DDB463713779E16 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		1C891409186F26F4362ED8F7 /* LicenseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseManager.swift; sourceTree = "<group>"; };
 		1EB617ED1A8F2F00F8FFF23C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		32BF8BD0127D963CB65570C8 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		33680BC0FB74B4EBFF473B49 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		3A3E2FB2A9220881AA9A2DE3 /* SlapShift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SlapShift.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B695DE059AA81AC843AE133 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		4032B66080C8B624E124F997 /* DefaultModes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultModes.swift; sourceTree = "<group>"; };
@@ -99,6 +106,15 @@
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		1594837E0D417DC756898825 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				33680BC0FB74B4EBFF473B49 /* AuthService.swift */,
+				08EE4E57BA4FD6FE0E89EB5C /* Theme.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
 		4305E32F6A19DE623AF67E02 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
@@ -119,6 +135,7 @@
 		5D2365778B2B0A706B291365 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				32BF8BD0127D963CB65570C8 /* AppIcon.icns */,
 				8997A808B10C110842F39938 /* Sslap.png */,
 				98DEE559EF64C961829C0DA3 /* DefaultShortcuts */,
 			);
@@ -256,6 +273,7 @@
 				3B695DE059AA81AC843AE133 /* MenuBarController.swift */,
 				FBA3C8F9E488228008AF270D /* OnboardingView.swift */,
 				B63CA65D6847B53A8A5054AA /* OnboardingWindow.swift */,
+				1594837E0D417DC756898825 /* Onboarding */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -355,6 +373,7 @@
 				7A7CA335792EE633BFFAD68F /* AppDelegate.swift in Sources */,
 				E58B17FB21DC6231BC7B4BCC /* AppPicker.swift in Sources */,
 				CFD042B1155FB9A9099A9C63 /* AppPreferences.swift in Sources */,
+				8125486297B2B0FB61225735 /* AuthService.swift in Sources */,
 				D37180A9E35019402FD23D67 /* DefaultModes.swift in Sources */,
 				D27B4FF0936F6FF75B12FF36 /* InstalledApps.swift in Sources */,
 				559123FCDED5841A68DD3350 /* LaunchAtLogin.swift in Sources */,
@@ -375,6 +394,7 @@
 				147B1853EA69CEE0545CCA7B /* ShortcutCatalog.swift in Sources */,
 				E77E1B8E14CE3EB75414369F /* ShortcutInstaller.swift in Sources */,
 				BB19E488BC8EC53FC99FD1DB /* SlapClassifier.swift in Sources */,
+				FE7C27E12DC8C5B200913925 /* Theme.swift in Sources */,
 				440BDDB6457BC4EC1468871B /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

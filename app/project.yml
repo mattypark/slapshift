@@ -57,6 +57,8 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleDisplayName: SlapShift
+        CFBundleIconFile: AppIcon
+        CFBundleIconName: AppIcon
         CFBundleURLTypes:
           - CFBundleURLName: com.matthewpark.slapshift.license
             CFBundleTypeRole: Viewer

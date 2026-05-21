@@ -38,8 +38,12 @@ final class LicenseSheet {
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
         win.title = "Unlock SlapShift"
-        win.styleMask = [.titled, .closable]
-        win.setContentSize(NSSize(width: 520, height: 540))
+        // Match OnboardingWindow: cream paper, transparent titlebar, single-sheet feel.
+        win.styleMask = [.titled, .closable, .fullSizeContentView]
+        win.titlebarAppearsTransparent = true
+        win.titleVisibility = .hidden
+        win.backgroundColor = NSColor(red: 0.937, green: 0.914, blue: 0.827, alpha: 1)
+        win.setContentSize(NSSize(width: 560, height: 600))
         win.center()
         win.isReleasedWhenClosed = false
         win.delegate = WindowDelegate.shared
@@ -76,81 +80,99 @@ private struct LicenseSheetView: View {
     @State private var errorMessage: String? = nil
     @State private var succeeded: Bool = false
 
-    private let buyURL = URL(string: "https://slapshift.app/#pricing")!
+    private let buyURL = URL(string: "https://slapshift.app/api/checkout")!
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            // Header
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Unlock SlapShift")
-                    .font(.system(size: 26, weight: .semibold))
-                Text("One-time purchase. All sales final.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
-            }
-
-            Divider()
-
-            // Pitch
-            VStack(alignment: .leading, spacing: 8) {
-                pitchRow("Slap to switch your whole workspace")
-                pitchRow("Three modes out of the box, fully editable")
-                pitchRow("Apple Silicon only — runs on your existing Mac")
-            }
-
-            // Buy button
-            Button {
-                NSWorkspace.shared.open(buyURL)
-            } label: {
-                HStack {
-                    Text("Buy a license")
-                    Spacer()
-                    Text("$9.99")
-                        .foregroundStyle(.secondary)
+        ZStack {
+            Brand.cream.ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 22) {
+                // Header — same serif treatment as the website hero.
+                VStack(alignment: .leading, spacing: 8) {
+                    (Text("Unlock ").foregroundColor(Brand.ink)
+                     + Text("SlapShift").italic().foregroundColor(Brand.accent)
+                     + Text(".").foregroundColor(Brand.ink))
+                        .font(.slapDisplay(size: 30))
+                    Text("One-time purchase.")
+                        .font(.slapBody(size: 12))
+                        .foregroundStyle(Brand.mute)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-            }
-            .controlSize(.large)
-            .keyboardShortcut(.defaultAction)
 
-            Divider()
+                Rectangle().fill(Brand.rule).frame(height: 1)
 
-            // Key entry
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Already have a key?")
-                    .font(.system(size: 13, weight: .medium))
-                TextField("SLAP-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX", text: $key)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, design: .monospaced))
-                    .disableAutocorrection(true)
-                    .disabled(submitting)
-                if let errorMessage {
-                    Text(errorMessage)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.red)
+                // Pitch
+                VStack(alignment: .leading, spacing: 10) {
+                    pitchRow("Slap to switch your whole workspace")
+                    pitchRow("Three modes out of the box, fully editable")
+                    pitchRow("Apple Silicon only — runs on your existing Mac")
                 }
-                if succeeded {
-                    Text("✓ License activated. You can close this window.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.green)
-                }
-                HStack {
-                    Button(submitting ? "Activating…" : "Activate") {
-                        Task { await activate() }
-                    }
-                    .disabled(submitting || key.trimmingCharacters(in: .whitespaces).isEmpty)
-                    Spacer()
-                    Button(succeeded ? "Done" : "Maybe later") {
-                        onDismiss()
+
+                // Buy button — inky pill, matches the website "DOWNLOAD FOR MACOS" CTA.
+                Button {
+                    NSWorkspace.shared.open(buyURL)
+                } label: {
+                    HStack {
+                        Text("Buy a license")
+                        Spacer()
+                        Text("$9.99")
                     }
                 }
-            }
+                .buttonStyle(InkButtonStyle(fullWidth: true))
+                .keyboardShortcut(.defaultAction)
 
-            Spacer()
+                Rectangle().fill(Brand.rule).frame(height: 1)
+
+                // Key entry
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Already have a key?")
+                        .font(.system(size: 13, weight: .semibold, design: .serif))
+                        .foregroundStyle(Brand.ink)
+                    TextField("SLAP-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX", text: $key)
+                        .textFieldStyle(.plain)
+                        .font(.slapBody(size: 12))
+                        .foregroundStyle(Brand.ink)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(Brand.paper)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .stroke(Brand.rule, lineWidth: 1)
+                        )
+                        .disableAutocorrection(true)
+                        .disabled(submitting)
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.slapBody(size: 11))
+                            .foregroundStyle(Brand.accent)
+                    }
+                    if succeeded {
+                        Text("✓ License activated. You can close this window.")
+                            .font(.slapBody(size: 11))
+                            .foregroundStyle(Brand.hill)
+                    }
+                    HStack {
+                        Button(submitting ? "Activating…" : "Activate") {
+                            Task { await activate() }
+                        }
+                        .buttonStyle(OutlineButtonStyle())
+                        .disabled(submitting || key.trimmingCharacters(in: .whitespaces).isEmpty)
+                        Spacer()
+                        Button(succeeded ? "Done" : "Maybe later") {
+                            onDismiss()
+                        }
+                        .buttonStyle(OutlineButtonStyle())
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 36)
+            .padding(.top, 36)
+            .padding(.bottom, 28)
         }
-        .padding(28)
-        .frame(width: 520, height: 540, alignment: .topLeading)
+        .frame(width: 560, height: 600, alignment: .topLeading)
         .onAppear {
             if let initial = initialKey, !initial.isEmpty {
                 key = initial
@@ -160,9 +182,13 @@ private struct LicenseSheetView: View {
     }
 
     private func pitchRow(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text("•").foregroundStyle(.secondary)
-            Text(text).font(.system(size: 13))
+        HStack(alignment: .top, spacing: 10) {
+            Text("•")
+                .font(.slapBody(size: 13))
+                .foregroundStyle(Brand.accent)
+            Text(text)
+                .font(.slapBody(size: 13))
+                .foregroundStyle(Brand.ink)
         }
     }
 

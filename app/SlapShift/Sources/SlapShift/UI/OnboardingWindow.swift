@@ -34,8 +34,14 @@ final class OnboardingWindow {
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
         win.title = "Welcome to SlapShift"
-        win.styleMask = [.titled, .closable]
-        win.setContentSize(NSSize(width: 560, height: 460))
+        // .fullSizeContentView lets the cream background bleed under the
+        // titlebar so the window feels like a single sheet of paper, the
+        // same way the website feels like a single cream canvas.
+        win.styleMask = [.titled, .closable, .fullSizeContentView]
+        win.titlebarAppearsTransparent = true
+        win.titleVisibility = .hidden
+        win.backgroundColor = NSColor(red: 0.937, green: 0.914, blue: 0.827, alpha: 1)
+        win.setContentSize(NSSize(width: 720, height: 640))
         win.center()
         win.isReleasedWhenClosed = false
         win.delegate = WindowDelegate.shared
