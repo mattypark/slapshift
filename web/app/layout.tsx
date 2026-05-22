@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Newsreader, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import SmoothScroll from "./components/SmoothScroll";
 
@@ -34,6 +35,7 @@ export default function RootLayout({
     >
       <body>
         <SmoothScroll>{children}</SmoothScroll>
+        <Analytics />
       </body>
     </html>
   );
