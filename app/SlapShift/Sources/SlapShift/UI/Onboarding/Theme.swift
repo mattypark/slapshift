@@ -35,13 +35,18 @@ enum Brand {
 // MARK: - Type ramp
 
 extension Font {
-    /// Hero serif — what "Slap your Mac, workflow maxed." uses on the web.
-    static func slapDisplay(size: CGFloat, weight: Font.Weight = .semibold) -> Font {
-        .system(size: size, weight: weight, design: .serif)
+    /// Hero title — Newsreader (bundled variable font, opsz 6-72pt, wght
+    /// ExtraLight-ExtraBold). Soft transitional serif with a warm, almost
+    /// game-credits feel — matches the website's `--font-serif` voice.
+    /// Loaded from Resources/Newsreader.ttf via ATSApplicationFontsPath.
+    /// Weight is applied with `.weight(...)` on the returned Font so the
+    /// variable wght axis interpolates correctly.
+    static func slapDisplay(size: CGFloat, weight: Font.Weight = .bold) -> Font {
+        Font.custom("Newsreader", size: size).weight(weight)
     }
-    /// Section headline. Smaller than display, still serif.
+    /// Section headline — same Newsreader family as slapDisplay, just smaller.
     static func slapTitle(size: CGFloat = 22) -> Font {
-        .system(size: size, weight: .semibold, design: .serif)
+        Font.custom("Newsreader", size: size).weight(.semibold)
     }
     /// Body text — monospace, same vibe as the website's --font-mono.
     static func slapBody(size: CGFloat = 13) -> Font {
@@ -200,41 +205,67 @@ struct SlapMark: View {
     }
 }
 
-/// Real pixel wordmark logo loaded from Resources/slapshiftlogo.png.
-/// Falls back to the SwiftUI-drawn SlapMark if the asset is missing so the
-/// header never collapses on a missing-resource bug.
+/// Real pixel "S" mark logo loaded from Resources/Sslap.png.
+/// Falls back to the older slapshiftlogo.png wordmark, then to the SwiftUI-drawn
+/// SlapMark, so the header never collapses on a missing-resource bug.
 struct BrandLogo: View {
     var height: CGFloat = 28
     var body: some View {
         Group {
-            if let url = Bundle.main.url(forResource: "slapshiftlogo", withExtension: "png"),
-               let nsImage = NSImage(contentsOf: url) {
-                Image(nsImage: nsImage)
+            if let image = Self.loadBundled(name: "Sslap")
+                ?? Self.loadBundled(name: "slapshiftlogo") {
+                Image(nsImage: image)
                     .resizable()
                     .interpolation(.high)
                     .scaledToFit()
                     .frame(height: height)
+                    // The Sslap.png ships without an alpha channel (the red S
+                    // sits on a solid white background). Multiply blends each
+                    // pixel against whatever's behind it: white pixels become
+                    // the parchment background (effectively transparent) and
+                    // the red strokes stay red. Cheaper and lossless compared
+                    // to pre-processing the PNG to add alpha.
+                    .blendMode(.multiply)
             } else {
                 SlapMark(size: height)
             }
         }
     }
+
+    private static func loadBundled(name: String) -> NSImage? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "png"),
+              let img = NSImage(contentsOf: url) else { return nil }
+        return img
+    }
 }
 
-/// Real multi-color Google "G" mark drawn in SwiftUI. No bundled asset needed.
-///
-/// Layout:
-///   • An annular ring split into four colored quarter-arcs (red top, yellow
-///     left, green bottom, blue right) drawn as stroked Circle().trim() segments.
-///   • A horizontal blue bar from the center to the right edge, forming the
-///     stem of the "G".
-///   • A small rectangular mask in the upper-right notch where the standard
-///     Google G opens — drawn by clipping the red arc slightly short.
-///
-/// This recreates Google's brand mark well enough that users immediately
-/// recognize "Sign in with Google" — much better than the generic `g.circle`
-/// SF Symbol which is just a letter glyph in a circle.
+/// Google "G" mark. Loads Resources/googlelogo.png — Google's actual brand
+/// asset — so the "Sign in with Google" button looks like the real thing and
+/// not a SwiftUI approximation. Falls back to a hand-drawn SwiftUI G if the
+/// PNG is missing from the bundle, so a broken Resources copy phase doesn't
+/// leave the button with an empty space.
 struct GoogleLogo: View {
+    var size: CGFloat = 18
+
+    var body: some View {
+        if let url = Bundle.main.url(forResource: "googlelogo", withExtension: "png"),
+           let nsImage = NSImage(contentsOf: url) {
+            Image(nsImage: nsImage)
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+                .frame(width: size, height: size)
+        } else {
+            GoogleLogoFallback(size: size)
+        }
+    }
+}
+
+/// SwiftUI-drawn fallback for the Google "G" — used only if the bundled PNG
+/// is missing. Geometry: SwiftUI Circle trim positions 0 = 3 o'clock, 0.25 = 6,
+/// 0.5 = 9, 0.75 = 12. The horizontal blue stem extends from the inner edge
+/// of the ring on the right inward to the horizontal center.
+private struct GoogleLogoFallback: View {
     var size: CGFloat = 18
 
     private let blue   = Color(red: 0.259, green: 0.522, blue: 0.957) // #4285F4
@@ -242,22 +273,38 @@ struct GoogleLogo: View {
     private let yellow = Color(red: 0.984, green: 0.737, blue: 0.016) // #FBBC04
     private let green  = Color(red: 0.204, green: 0.659, blue: 0.325) // #34A853
 
+    private var ringDiameter: CGFloat { size * 0.92 }
+    private var strokeWidth: CGFloat { size * 0.22 }
+    private var outerRadius: CGFloat { ringDiameter / 2 }
+    private var innerRadius: CGFloat { outerRadius - strokeWidth }
+
     var body: some View {
         ZStack {
-            // Four colored quarter arcs of the ring. SwiftUI's trim(from:to:)
-            // on Circle measures from 3 o'clock going clockwise (0 = right,
-            // 0.25 = bottom, 0.5 = left, 0.75 = top).
-            arc(from: 0.75, to: 1.00, color: red)    // top-right quadrant
-            arc(from: 0.50, to: 0.75, color: yellow) // top-left
-            arc(from: 0.25, to: 0.50, color: green)  // bottom-left
-            arc(from: 0.00, to: 0.25, color: blue)   // bottom-right
+            // Red top arc: from ~11 o'clock (0.66) sweeping clockwise through
+            // 12 and over to ~2 o'clock (0.92). Position 1.0 is 3 o'clock, so
+            // stopping at 0.92 leaves a clean gap above the stem entry point.
+            arc(from: 0.66, to: 0.92, color: red)
 
-            // Blue horizontal stem ("G" crossbar) — runs from center outward
-            // to the right edge, sitting at the vertical midline.
+            // Blue right arc: starts JUST below 3 o'clock (0.05) and sweeps
+            // down to ~5 o'clock (0.18). The gap from 0.92 → 1.0 → 0.05 is
+            // where the stem meets the ring on the right side.
+            arc(from: 0.05, to: 0.18, color: blue)
+
+            // Green bottom arc: from ~5 o'clock (0.18) through 6 to ~8 (0.42).
+            arc(from: 0.18, to: 0.42, color: green)
+
+            // Yellow left arc: from ~8 o'clock (0.42) up through 9 to ~11 (0.66),
+            // meeting the red arc.
+            arc(from: 0.42, to: 0.66, color: yellow)
+
+            // Blue horizontal stem. Sits on the vertical midline. Extends from
+            // the horizontal center (x = 0) out to the inner edge of the ring
+            // on the right (x = innerRadius). Width = innerRadius. Center
+            // offset is therefore innerRadius / 2 so the left edge lands at 0.
             Rectangle()
                 .fill(blue)
-                .frame(width: size * 0.48, height: size * 0.18)
-                .offset(x: size * 0.24, y: 0)
+                .frame(width: innerRadius, height: strokeWidth)
+                .offset(x: innerRadius / 2, y: 0)
         }
         .frame(width: size, height: size)
     }
@@ -265,7 +312,7 @@ struct GoogleLogo: View {
     private func arc(from start: CGFloat, to end: CGFloat, color: Color) -> some View {
         Circle()
             .trim(from: start, to: end)
-            .stroke(color, style: StrokeStyle(lineWidth: size * 0.22, lineCap: .butt))
-            .frame(width: size * 0.88, height: size * 0.88)
+            .stroke(color, style: StrokeStyle(lineWidth: strokeWidth, lineCap: .butt))
+            .frame(width: ringDiameter, height: ringDiameter)
     }
 }

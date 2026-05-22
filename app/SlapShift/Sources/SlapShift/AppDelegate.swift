@@ -177,23 +177,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Reflect current permission state immediately — motion may already be running.
         state.permissionGranted = motionRunning
 
-        // Shortcuts step — run the installer; mark installed when bundled files are
-        // handed off to Shortcuts.app. Zero bundled files is also "done" (no-op case).
-        state.installDefaultShortcuts = { [weak state] in
-            let count = ShortcutInstaller.installBundledShortcuts()
-            print("Onboarding: opened \(count) bundled shortcut file(s) for install confirmation")
-            state?.shortcutsInstalled = true
-        }
-
         // Paywall step — "Buy now" routes to Stripe Checkout in the user's browser.
         // We don't open an in-app webview; Stripe's hosted checkout is the trusted
         // payment surface and the redirect back to slapshift://license activates
-        // the key automatically once the webhook completes.
-        state.openCheckout = { [weak state] in
+        // the key automatically once the webhook completes. A validated promo
+        // code (if any) is forwarded as ?promo=… so Stripe's hosted page can
+        // apply the matching Promotion Code without the user re-entering it.
+        state.openCheckout = { [weak state] promoCode in
             let email = state?.email.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             var comps = URLComponents(string: "https://slapshift.app/api/checkout")!
+            var items: [URLQueryItem] = []
             if !email.isEmpty {
-                comps.queryItems = [URLQueryItem(name: "email", value: email)]
+                items.append(URLQueryItem(name: "email", value: email))
+            }
+            if let code = promoCode, !code.isEmpty {
+                items.append(URLQueryItem(name: "promo", value: code))
+            }
+            if !items.isEmpty {
+                comps.queryItems = items
             }
             if let url = comps.url {
                 NSWorkspace.shared.open(url)
@@ -206,7 +207,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         onboardingState = state
-        onboardingWindow = OnboardingWindow(state: state, onFinish: { [weak self] in
+        let finish: () -> Void = { [weak self] in
             self?.onboardingComplete = true
             self?.persistOnboardingProfile(state)
             self?.onboardingState = nil
@@ -216,7 +217,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // should appear. It only appears once they ALSO have a license.
             self?.installMenuBarIfReady()
             print("Onboarding complete")
-        })
+        }
+        onboardingWindow = OnboardingWindow(state: state, onFinish: finish)
         onboardingWindow?.show()
     }
 
@@ -284,13 +286,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleSlap(_ event: SlapEvent) {
-        // If onboarding is active and on the test-slap step, swallow the slap to confirm
-        // the sensor works — don't fire a real mode mid-tutorial. Flash the icon ONLY
-        // if it's actually visible (i.e. user already finished onboarding once before,
-        // which shouldn't happen here, but guard anyway).
-        if let state = onboardingState, !state.testSlapDetected {
-            state.testSlapDetected = true
-            print("Onboarding: test slap detected (\(event.count) slap(s) @ \(String(format: "%.2f", event.peakG))g)")
+        // If onboarding is on a demo step (1/2/3 slaps), route the slap into
+        // the onboarding state instead of the user's real modes. The demo
+        // steps DETECT ONLY — they don't open apps, quit apps, or launch URLs.
+        // The point is to teach the gesture and prove the sensor works; the
+        // user gets to actually fire modes after they customize and pay. On
+        // a mismatch the inline UI shows "you slapped N, try again".
+        if let state = onboardingState, let expected = state.step.expectedSlapCount {
+            let matched = state.recordDemoSlap(actualCount: event.count)
+            print("Onboarding demo: expected \(expected), got \(event.count) — \(matched ? "match" : "mismatch")")
             return
         }
 

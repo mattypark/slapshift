@@ -28,8 +28,7 @@ enum DefaultModes {
             ],
             urlsToOpen: [
                 "http://localhost:3000"
-            ],
-            focusModeName: "Do Not Disturb"
+            ]
         )
     }
 
@@ -51,8 +50,7 @@ enum DefaultModes {
                 "https://admission.princeton.edu",
                 "https://admissions.yale.edu",
                 "https://admissions.mit.edu"
-            ],
-            focusModeName: "Personal"
+            ]
         )
     }
 
@@ -71,8 +69,7 @@ enum DefaultModes {
                 "com.apple.Terminal",
                 "com.tinyspeck.slackmacgap"
             ],
-            urlsToOpen: [],
-            focusModeName: "Sleep"
+            urlsToOpen: []
         )
     }
 }

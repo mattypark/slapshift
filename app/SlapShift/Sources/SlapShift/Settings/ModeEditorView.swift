@@ -1,7 +1,12 @@
-// ModeEditorView — edit one Mode (apps, URLs, focus, etc.).
+// ModeEditorView — edit one Mode (apps, URLs).
 //
 // Used as a card inside SettingsView. Holds local @State while editing, commits to ModeStore
 // on each change so the JSON file stays in sync with the UI.
+//
+// Brand match: cream paper surface, ink text, Newsreader serif headlines, mono body,
+// red accent — same vocabulary as the website + onboarding window.
+//
+// NOTE: Focus mode editing was removed in v1.0. See Modes/Mode.swift for rationale.
 
 import SwiftUI
 
@@ -13,10 +18,6 @@ struct ModeEditorView: View {
     @State private var showingOpenPicker = false
     @State private var showingQuitPicker = false
     @State private var newURL: String = ""
-
-    /// Names of Focus modes the user has wired up via SlapShift's shortcut helpers.
-    /// Refreshed via ShortcutCatalog on appear and on demand.
-    @State private var availableFocusNames: [String] = []
 
     private var mode: Mode? {
         modeStore.modes.first(where: { $0.id == modeID })
@@ -31,18 +32,22 @@ struct ModeEditorView: View {
     var body: some View {
         guard let mode = mode else { return AnyView(EmptyView()) }
         return AnyView(
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 18) {
                 header(mode)
-                Divider()
+                hairline
                 appsSection(mode)
-                Divider()
+                hairline
                 urlsSection(mode)
-                Divider()
-                focusSection(mode)
             }
-            .padding()
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(12)
+            .padding(18)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Brand.cream)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Brand.rule.opacity(0.5), lineWidth: 1)
+            )
             .sheet(isPresented: $showingOpenPicker) {
                 AppPickerView(
                     title: "Apps to open for \(mode.name)",
@@ -70,25 +75,41 @@ struct ModeEditorView: View {
 
     // MARK: - Sections
 
-    private func header(_ mode: Mode) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: mode.symbol)
-                .font(.system(size: 28))
-                .frame(width: 44, height: 44)
-                .background(Color.accentColor.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+    private var hairline: some View {
+        Rectangle()
+            .fill(Brand.rule.opacity(0.4))
+            .frame(height: 1)
+    }
 
-            VStack(alignment: .leading, spacing: 2) {
+    private func header(_ mode: Mode) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: mode.symbol)
+                .font(.system(size: 24))
+                .foregroundStyle(Brand.accent)
+                .frame(width: 48, height: 48)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Brand.paper)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Brand.rule.opacity(0.5), lineWidth: 1)
+                )
+
+            VStack(alignment: .leading, spacing: 3) {
                 TextField("Mode name", text: Binding(
                     get: { mode.name },
                     set: { newName in commit { $0.name = newName } }
                 ))
                 .textFieldStyle(.plain)
-                .font(.title2.weight(.semibold))
+                .font(.slapTitle(size: 20))
+                .foregroundStyle(Brand.ink)
 
                 Text("\(mode.slapCount) slap\(mode.slapCount > 1 ? "s" : "")")
-                    .foregroundColor(.secondary)
-                    .font(.subheadline)
+                    .font(.slapMeta(size: 11))
+                    .foregroundStyle(Brand.mute)
+                    .tracking(0.4)
+                    .textCase(.uppercase)
             }
 
             Spacer()
@@ -98,27 +119,32 @@ struct ModeEditorView: View {
                 set: { newVal in commit { $0.enabled = newVal } }
             ))
             .toggleStyle(.switch)
+            .tint(Brand.accent)
             .labelsHidden()
         }
     }
 
     private func appsSection(_ mode: Mode) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Apps to open", systemImage: "app.badge.checkmark")
-                    .font(.headline)
-                Spacer()
-                Button("Edit") { showingOpenPicker = true }
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    sectionLabel("Apps to open", systemImage: "app.badge.checkmark")
+                    Spacer()
+                    Button("Edit") { showingOpenPicker = true }
+                        .buttonStyle(EditPillStyle())
+                }
+                appsRow(mode.appsToOpen, emptyLabel: "No apps configured")
             }
-            appsRow(mode.appsToOpen, emptyLabel: "No apps configured")
 
-            HStack {
-                Label("Apps to quit", systemImage: "xmark.app")
-                    .font(.headline)
-                Spacer()
-                Button("Edit") { showingQuitPicker = true }
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    sectionLabel("Apps to quit", systemImage: "xmark.app")
+                    Spacer()
+                    Button("Edit") { showingQuitPicker = true }
+                        .buttonStyle(EditPillStyle())
+                }
+                appsRow(mode.appsToQuit, emptyLabel: "No apps to quit")
             }
-            appsRow(mode.appsToQuit, emptyLabel: "No apps to quit")
         }
     }
 
@@ -126,8 +152,8 @@ struct ModeEditorView: View {
         Group {
             if bundleIDs.isEmpty {
                 Text(emptyLabel)
-                    .foregroundColor(.secondary)
-                    .font(.caption)
+                    .font(.slapBody(size: 11))
+                    .foregroundStyle(Brand.whisper)
                     .padding(.vertical, 4)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -151,43 +177,79 @@ struct ModeEditorView: View {
             } else {
                 Image(systemName: "questionmark.app.dashed")
                     .frame(width: 18, height: 18)
+                    .foregroundStyle(Brand.mute)
             }
             Text(resolved?.name ?? bundleID)
-                .font(.caption)
+                .font(.slapBody(size: 11))
+                .foregroundStyle(Brand.ink)
                 .lineLimit(1)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.gray.opacity(0.12))
-        .cornerRadius(6)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Brand.paper)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .stroke(Brand.rule.opacity(0.5), lineWidth: 1)
+        )
     }
 
     private func urlsSection(_ mode: Mode) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("URLs to open (in your default browser)", systemImage: "link")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 10) {
+            sectionLabel("URLs to open (in your default browser)", systemImage: "link")
 
             ForEach(mode.urlsToOpen, id: \.self) { url in
-                HStack {
-                    Image(systemName: "globe").foregroundColor(.secondary)
-                    Text(url).font(.caption.monospaced()).lineLimit(1)
+                HStack(spacing: 8) {
+                    Image(systemName: "globe").foregroundStyle(Brand.mute)
+                    Text(url)
+                        .font(.slapBody(size: 11))
+                        .foregroundStyle(Brand.ink)
+                        .lineLimit(1)
                     Spacer()
                     Button(action: {
                         commit { $0.urlsToOpen.removeAll { $0 == url } }
                     }) {
-                        Image(systemName: "minus.circle.fill").foregroundColor(.red.opacity(0.7))
+                        Image(systemName: "minus.circle.fill")
+                            .foregroundStyle(Brand.accent.opacity(0.85))
                     }
                     .buttonStyle(.plain)
                 }
+                .padding(.vertical, 2)
             }
 
-            HStack {
+            HStack(spacing: 8) {
                 TextField("https://example.com", text: $newURL)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
+                    .font(.slapBody(size: 12))
+                    .foregroundStyle(Brand.ink)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Brand.paper)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(Brand.rule.opacity(0.6), lineWidth: 1)
+                    )
                     .onSubmit(addURL)
                 Button("Add", action: addURL)
+                    .buttonStyle(EditPillStyle())
                     .disabled(newURL.trimmingCharacters(in: .whitespaces).isEmpty)
             }
+        }
+    }
+
+    private func sectionLabel(_ text: String, systemImage: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.system(size: 12))
+                .foregroundStyle(Brand.accent)
+            Text(text)
+                .font(.system(size: 13, weight: .semibold, design: .serif))
+                .foregroundStyle(Brand.ink)
         }
     }
 
@@ -198,58 +260,29 @@ struct ModeEditorView: View {
         commit { $0.urlsToOpen.append(normalized) }
         newURL = ""
     }
+}
 
-    private func focusSection(_ mode: Mode) -> some View {
-        // The picker offers (none) + every installed SlapShift focus-helper shortcut.
-        // If the stored focusModeName doesn't match any installed shortcut, we still
-        // show it (so the user can SEE the orphaned selection) with a warning icon.
-        let stored = mode.focusModeName
-        let isOrphaned = stored != nil && !availableFocusNames.contains(stored!)
+// MARK: - Edit pill button
 
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label("Focus mode to enter (optional)", systemImage: "moon.circle")
-                    .font(.headline)
-                Spacer()
-                Button {
-                    availableFocusNames = ShortcutCatalog.availableFocusNames()
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .buttonStyle(.borderless)
-                .help("Rescan installed Focus shortcuts")
-            }
-
-            Picker("", selection: Binding(
-                get: { stored ?? "" },
-                set: { newVal in
-                    commit { $0.focusModeName = newVal.isEmpty ? nil : newVal }
-                }
-            )) {
-                Text("(none)").tag("")
-                ForEach(availableFocusNames, id: \.self) { name in
-                    Text(name).tag(name)
-                }
-                // Surface orphaned values so the user notices a broken wiring.
-                if isOrphaned, let stored = stored {
-                    Text("⚠ \(stored) (shortcut not installed)").tag(stored)
-                }
-            }
-            .labelsHidden()
-            .pickerStyle(.menu)
-
-            if availableFocusNames.isEmpty {
-                Text("No Focus shortcuts found. Install the SlapShift focus helpers from the first-run onboarding (or create shortcuts named `SlapShift: Set Focus to <name>` in Shortcuts.app).")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            } else if isOrphaned {
-                Text("This mode references a Focus shortcut that's not installed. The focus change will silently no-op until you install it.")
-                    .font(.caption2)
-                    .foregroundColor(.orange)
-            }
-        }
-        .onAppear {
-            availableFocusNames = ShortcutCatalog.availableFocusNames()
-        }
+/// Small "Edit" / "Add" pill — outline style, matches the website's secondary buttons.
+private struct EditPillStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.slapMeta(size: 11))
+            .tracking(0.06)
+            .textCase(.uppercase)
+            .foregroundStyle(Brand.ink)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(configuration.isPressed ? Brand.creamDeeper : Brand.paper)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(Brand.ink.opacity(0.6), lineWidth: 1)
+            )
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
     }
 }

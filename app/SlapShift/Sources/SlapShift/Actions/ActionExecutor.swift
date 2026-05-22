@@ -2,11 +2,14 @@
 //
 // Ordering matters for the demo feel:
 //   1. Quits first  (clears the desktop)
-//   2. Focus mode   (silences notifications before apps spam us)
-//   3. Apps open    (the meat of the gesture)
-//   4. URLs open    (after apps so the browser is already up)
+//   2. Apps open    (the meat of the gesture)
+//   3. URLs open    (after apps so the browser is already up)
 //
 // Each step is non-fatal: if Slack isn't running, the quit is a no-op, not an error.
+//
+// NOTE: Focus mode integration was removed in v1.0. See Modes/Mode.swift for
+// the rationale. A future release will reintroduce it as a background-running
+// System Extension once we have time to do it without the onboarding tax.
 
 import AppKit
 import Foundation
@@ -15,7 +18,6 @@ final class ActionExecutor {
 
     func execute(_ mode: Mode) {
         quitApps(mode.appsToQuit)
-        if let focus = mode.focusModeName { enterFocus(focus) }
         openApps(mode.appsToOpen)
         openURLs(mode.urlsToOpen)
     }
@@ -65,26 +67,5 @@ final class ActionExecutor {
             }
             NSWorkspace.shared.open(url)
         }
-    }
-
-    // MARK: - Focus mode (via Shortcuts CLI)
-    //
-    // macOS has no public API to set a Focus directly, but Shortcuts can ("Set Focus" action).
-    // The first-run installer creates one shortcut per Focus name: "SlapShift: Set Focus to X".
-    // Here we just shell out to `shortcuts run`. Non-fatal if the shortcut doesn't exist.
-
-    private func enterFocus(_ name: String) {
-        let shortcutName = "SlapShift: Set Focus to \(name)"
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/shortcuts")
-        process.arguments = ["run", shortcutName]
-        process.standardOutput = Pipe()
-        process.standardError = Pipe()
-        do {
-            try process.run()
-        } catch {
-            NSLog("SlapShift: shortcuts run failed for '\(shortcutName)': \(error)")
-        }
-        // Don't wait — fire and forget. If the shortcut takes 2s the rest of the mode shouldn't block.
     }
 }

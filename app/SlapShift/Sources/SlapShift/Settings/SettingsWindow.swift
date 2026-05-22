@@ -39,6 +39,14 @@ final class SettingsWindow {
         win.center()
         win.isReleasedWhenClosed = false
         win.delegate = WindowDelegate.shared
+        // Force light appearance so the cream/paper brand palette reads correctly
+        // regardless of the user's system theme — the website is cream-on-ink,
+        // not dark, and we want continuity.
+        win.appearance = NSAppearance(named: .aqua)
+        // Paint the titlebar to match the paper surface beneath it so the chrome
+        // doesn't break the parchment feel with a default-grey gradient.
+        win.titlebarAppearsTransparent = true
+        win.backgroundColor = NSColor(red: 0.964, green: 0.945, blue: 0.871, alpha: 1.0) // Brand.paper
 
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)

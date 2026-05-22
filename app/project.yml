@@ -64,6 +64,7 @@ targets:
             CFBundleTypeRole: Viewer
             CFBundleURLSchemes:
               - slapshift
+        ATSApplicationFontsPath: "."
     entitlements:
       path: SlapShift/SlapShift.entitlements
     settings:
