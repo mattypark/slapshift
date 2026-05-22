@@ -42,11 +42,11 @@ extension Font {
     /// Weight is applied with `.weight(...)` on the returned Font so the
     /// variable wght axis interpolates correctly.
     static func slapDisplay(size: CGFloat, weight: Font.Weight = .bold) -> Font {
-        Font.custom("Newsreader", size: size).weight(weight)
+        Font.custom("Newsreader 16pt", size: size).weight(weight)
     }
     /// Section headline — same Newsreader family as slapDisplay, just smaller.
     static func slapTitle(size: CGFloat = 22) -> Font {
-        Font.custom("Newsreader", size: size).weight(.semibold)
+        Font.custom("Newsreader 16pt", size: size).weight(.semibold)
     }
     /// Body text — monospace, same vibe as the website's --font-mono.
     static func slapBody(size: CGFloat = 13) -> Font {
@@ -212,24 +212,31 @@ struct BrandLogo: View {
     var height: CGFloat = 28
     var body: some View {
         Group {
-            if let image = Self.loadBundled(name: "Sslap")
-                ?? Self.loadBundled(name: "slapshiftlogo") {
-                Image(nsImage: image)
+            if let loaded = Self.loadBrandImage() {
+                Image(nsImage: loaded.image)
                     .resizable()
                     .interpolation(.high)
                     .scaledToFit()
                     .frame(height: height)
-                    // The Sslap.png ships without an alpha channel (the red S
-                    // sits on a solid white background). Multiply blends each
-                    // pixel against whatever's behind it: white pixels become
-                    // the parchment background (effectively transparent) and
-                    // the red strokes stay red. Cheaper and lossless compared
-                    // to pre-processing the PNG to add alpha.
-                    .blendMode(.multiply)
+                    // Multiply only helps for white-backed PNGs (Sslap.png): white
+                    // pixels collapse onto the cream background, red strokes stay
+                    // red. The cream-backed slapshiftlogo.png already matches the
+                    // brand surface and would darken under multiply, so we skip it.
+                    .blendMode(loaded.useMultiply ? .multiply : .normal)
             } else {
                 SlapMark(size: height)
             }
         }
+    }
+
+    private static func loadBrandImage() -> (image: NSImage, useMultiply: Bool)? {
+        if let img = loadBundled(name: "slapshiftlogo") {
+            return (img, useMultiply: false)
+        }
+        if let img = loadBundled(name: "Sslap") {
+            return (img, useMultiply: true)
+        }
+        return nil
     }
 
     private static func loadBundled(name: String) -> NSImage? {
