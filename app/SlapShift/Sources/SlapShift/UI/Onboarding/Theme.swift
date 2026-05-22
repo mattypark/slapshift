@@ -218,11 +218,12 @@ struct BrandLogo: View {
                     .interpolation(.high)
                     .scaledToFit()
                     .frame(height: height)
-                    // Multiply only helps for white-backed PNGs (Sslap.png): white
-                    // pixels collapse onto the cream background, red strokes stay
-                    // red. The cream-backed slapshiftlogo.png already matches the
-                    // brand surface and would darken under multiply, so we skip it.
-                    .blendMode(loaded.useMultiply ? .multiply : .normal)
+                    // Multiply lets the PNG's background (cream for slapshiftlogo,
+                    // white for Sslap) drop out onto the app's surface cream so the
+                    // wordmark reads as painted directly on the canvas instead of
+                    // pasted on a slightly off-cream tile. Red strokes survive.
+                    .blendMode(.multiply)
+                    .opacity(0.92)
             } else {
                 SlapMark(size: height)
             }

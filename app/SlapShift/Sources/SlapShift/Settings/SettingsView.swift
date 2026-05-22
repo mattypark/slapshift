@@ -46,7 +46,7 @@ struct SettingsView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 14) {
-            BrandLogo(height: 44)
+            BrandLogo(height: 64)
             VStack(alignment: .leading, spacing: 4) {
                 Text("SlapShift")
                     .font(.slapDisplay(size: 30, weight: .bold))

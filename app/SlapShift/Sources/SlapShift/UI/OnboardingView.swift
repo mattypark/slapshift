@@ -65,7 +65,7 @@ struct OnboardingView: View {
 
     private var header: some View {
         HStack {
-            BrandLogo(height: 28)
+            BrandLogo(height: 64)
             Spacer()
             StepDots(current: state.step.index, total: OnboardingState.Step.allCases.count)
         }
