@@ -21,6 +21,13 @@ final class SettingsWindow {
         self.motionMonitor = motionMonitor
     }
 
+    /// Tear down the settings window if it's open. Used by Sign Out so a
+    /// stale settings panel doesn't linger over the onboarding flow.
+    func hide() {
+        window?.close()
+        window = nil
+    }
+
     func show() {
         if let existing = window {
             NSApp.setActivationPolicy(.regular)

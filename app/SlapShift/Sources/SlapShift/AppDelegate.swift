@@ -64,6 +64,7 @@ let motionMonitor = MotionMonitor()
             print("Test: simulating \(count) slap(s)")
             self?.handleSlap(SlapEvent(count: count, peakG: 1.20, timestamp: 0))
         }
+        menuBar.onSignOut = { [weak self] in self?.confirmAndSignOut() }
 
         // Rebuild the menu when modes change so "1 slap → Coding" labels stay accurate.
         modeStore.$modes
@@ -245,8 +246,8 @@ let motionMonitor = MotionMonitor()
                 state.licenseInputKey = key
                 state.activateLicense()
             }
-            onboardingWindow?.window?.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            // show() reuses the existing window if present and re-fronts it.
+            onboardingWindow?.show()
             return
         }
 
@@ -414,6 +415,67 @@ let motionMonitor = MotionMonitor()
         print("Menu bar icon installed (look for hand.tap symbol top-right)")
     }
 
+    // MARK: - Sign out
+
+    /// Confirm + sign out. Triggered by the menu bar Sign Out item. We surface
+    /// an NSAlert before doing anything destructive because clearing the
+    /// license cache + onboarding flag drops the user all the way back to
+    /// the welcome step. Re-pasting the same key on the same Mac re-activates
+    /// instantly (server-side machine_id binding matches the same hardware ID).
+    private func confirmAndSignOut() {
+        let alert = NSAlert()
+        alert.messageText = "Sign out of SlapShift?"
+        alert.informativeText = """
+            You'll go back through onboarding. Your license key still works \
+            on this Mac — paste it again on the paywall to re-activate. Your \
+            modes and preferences are kept.
+            """
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Sign Out")
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        let response = alert.runModal()
+        guard response == .alertFirstButtonReturn else { return }
+        signOut()
+    }
+
+    /// Reset the app to its pre-onboarding state. Clears the license cache
+    /// and the onboarding-complete flag + persisted profile fields, removes
+    /// the menu bar icon, closes home/settings windows, then re-presents
+    /// onboarding. Modes are intentionally NOT touched — the user may sign
+    /// out to switch licenses but keep their hard-earned mode config.
+    private func signOut() {
+        print("Signing out…")
+
+        // 1. Drop the cached license (keychain) so the paywall fires again.
+        licenseManager.deactivate()
+
+        // 2. Forget that onboarding was ever completed + clear persisted
+        //    profile so the user can re-enter their email/usage cleanly.
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: Self.onboardingCompleteKey)
+        defaults.removeObject(forKey: "onboarding.name")
+        defaults.removeObject(forKey: "onboarding.email")
+        defaults.removeObject(forKey: "onboarding.usage")
+        defaults.removeObject(forKey: "onboarding.otherUsageDetail")
+
+        // 3. Tear down menu bar so the gate (`installMenuBarIfReady`) holds:
+        //    no icon until onboarding done AND licensed.
+        if menuBarInstalled {
+            menuBar.uninstall()
+            menuBarInstalled = false
+        }
+
+        // 4. Close the home + settings windows so the only surface is the
+        //    onboarding flow again.
+        homeWindow?.close()
+        homeWindow = nil
+        settingsWindow.hide()
+
+        // 5. Re-present onboarding from step one.
+        presentOnboarding()
+    }
+
     /// Save the lightweight onboarding profile (name, email, usage tags) to
     /// UserDefaults so it survives relaunch. Email is the durable user handle
     /// for the license + mailing list.
@@ -472,21 +534,27 @@ let motionMonitor = MotionMonitor()
     private func startPermissionPolling() {
         stopPermissionPolling()
         permissionPollTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
-            guard let self = self, let state = self.onboardingState, !state.permissionGranted else {
-                self?.stopPermissionPolling()
-                return
-            }
-            do {
-                try self.motion.start()
-                self.motionRunning = true
-                if self.menuBarInstalled {
-                    self.menuBar.setState(.armed)
+            // Timer.scheduledTimer's closure is @Sendable under Swift 6, but
+            // AppDelegate's state is @MainActor-isolated. Hop back to the main
+            // actor so we can touch motionRunning / menuBar / onboardingState
+            // without tripping concurrency diagnostics.
+            Task { @MainActor in
+                guard let self = self, let state = self.onboardingState, !state.permissionGranted else {
+                    self?.stopPermissionPolling()
+                    return
                 }
-                state.permissionGranted = true
-                self.stopPermissionPolling()
-                print("Onboarding: motion permission confirmed")
-            } catch {
-                // Still waiting on the user — keep polling.
+                do {
+                    try self.motion.start()
+                    self.motionRunning = true
+                    if self.menuBarInstalled {
+                        self.menuBar.setState(.armed)
+                    }
+                    state.permissionGranted = true
+                    self.stopPermissionPolling()
+                    print("Onboarding: motion permission confirmed")
+                } catch {
+                    // Still waiting on the user — keep polling.
+                }
             }
         }
     }

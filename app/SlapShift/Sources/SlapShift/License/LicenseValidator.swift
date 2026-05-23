@@ -85,7 +85,7 @@ enum LicenseValidator {
 
             if let ok = json["ok"] as? Bool, ok {
                 guard let expiresAtStr = json["expiresAt"] as? String,
-                      let expiresAt = ISO8601DateFormatter().date(from: expiresAtStr) else {
+                      let expiresAt = parseISO8601(expiresAtStr) else {
                     return .failure(.decode)
                 }
                 let email = json["email"] as? String
@@ -97,6 +97,21 @@ enum LicenseValidator {
         } catch {
             return .failure(.network(error.localizedDescription))
         }
+    }
+
+    /// Parse an ISO-8601 timestamp from the server. The server uses
+    /// `Date.toISOString()` which ALWAYS emits milliseconds
+    /// (e.g. `2026-06-22T15:30:00.123Z`). Apple's default
+    /// `ISO8601DateFormatter` parses only to-the-second precision and
+    /// returns nil on fractional seconds, so we try the millisecond
+    /// variant first and fall back to the plain variant for safety.
+    private static func parseISO8601(_ s: String) -> Date? {
+        let withMs = ISO8601DateFormatter()
+        withMs.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = withMs.date(from: s) { return d }
+        let plain = ISO8601DateFormatter()
+        plain.formatOptions = [.withInternetDateTime]
+        return plain.date(from: s)
     }
 
     private static func map(reason: String) -> LicenseValidationFailure {

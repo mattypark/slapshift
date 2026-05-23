@@ -31,26 +31,45 @@ final class MenuBarController {
     var onOpenSettings: (() -> Void)?
     var onOpenHome: (() -> Void)?
     var onTestSlap: ((Int) -> Void)?
+    var onSignOut: (() -> Void)?
 
     private let modeStore: ModeStore
-    private let statusItem: NSStatusItem
+    private var statusItem: NSStatusItem?
     private var flashTimer: Timer?
 
     init(modeStore: ModeStore) {
         self.modeStore = modeStore
-        self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     }
 
     func install() {
-        if let button = statusItem.button {
+        // Allow re-install after a Sign Out → re-onboard cycle by lazily
+        // creating the status item each time the gate (`installMenuBarIfReady`)
+        // is satisfied.
+        if statusItem == nil {
+            statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        }
+        if let button = statusItem?.button {
             button.image = Self.icon(for: .armed)
             button.toolTip = "SlapShift — listening for slaps"
         }
         rebuildMenu()
     }
 
+    /// Remove the status item from the menu bar. Used by Sign Out so the
+    /// menu bar disappears while the user is back in onboarding — matches
+    /// `installMenuBarIfReady`'s gate (no icon unless onboarding done AND
+    /// licensed). Safe to call when nothing is installed.
+    func uninstall() {
+        flashTimer?.invalidate()
+        flashTimer = nil
+        guard let item = statusItem else { return }
+        item.menu = nil
+        NSStatusBar.system.removeStatusItem(item)
+        statusItem = nil
+    }
+
     func setState(_ state: State) {
-        guard let button = statusItem.button else { return }
+        guard let button = statusItem?.button else { return }
         button.image = Self.icon(for: state)
         switch state {
         case .armed:
@@ -73,7 +92,7 @@ final class MenuBarController {
     /// Rebuilds the menu so mode names reflect the current ModeStore. Called on launch
     /// and whenever the user edits a mode in the settings window.
     func rebuildMenu() {
-        statusItem.menu = buildMenu()
+        statusItem?.menu = buildMenu()
     }
 
     private func buildMenu() -> NSMenu {
@@ -117,6 +136,10 @@ final class MenuBarController {
         menu.addItem(testParent)
         menu.addItem(.separator())
 
+        let signOut = NSMenuItem(title: "Sign Out…", action: #selector(signOut), keyEquivalent: "")
+        signOut.target = self
+        menu.addItem(signOut)
+
         let quit = NSMenuItem(title: "Quit SlapShift", action: #selector(quit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
@@ -138,6 +161,10 @@ final class MenuBarController {
 
     @objc private func quit() {
         onQuit?()
+    }
+
+    @objc private func signOut() {
+        onSignOut?()
     }
 
     // MARK: - Icons
