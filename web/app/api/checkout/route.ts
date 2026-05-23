@@ -39,9 +39,11 @@ async function createCheckoutSession(opts: CheckoutOptions = {}) {
     success_url: `${env.NEXT_PUBLIC_SITE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${env.NEXT_PUBLIC_SITE_URL}/?canceled=1`,
     billing_address_collection: "auto",
-    // Promotion codes shown on the Stripe page when the buyer indicated they
-    // have one. Off by default so the field doesn't clutter the happy path.
-    allow_promotion_codes: opts.allowPromotionCodes ?? false,
+    // Promotion codes always allowed at checkout. Buyers may have a code from
+    // a launch DM, Twitter post, or friend referral and need the field visible
+    // on the Stripe page regardless of whether they came from the desktop app
+    // or the website Buy button.
+    allow_promotion_codes: opts.allowPromotionCodes ?? true,
     custom_text: {
       submit: {
         message: "All sales final. No refunds.",

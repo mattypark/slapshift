@@ -30,8 +30,13 @@ export default function Landing() {
           </a>
         </div>
 
-        {/* Hero copy — centered vertically, nudged 10px below true center */}
-        <div className="relative z-20 flex h-full items-center justify-center px-8">
+        {/* Hero copy — centered vertically, but reserve ~380px at the bottom
+            so the centered block sits ABOVE the seated PixelCharacter. Without
+            this padding, on shorter laptop screens (e.g. 13" MacBook in a
+            non-fullscreen window) the centered Download button lands directly
+            over the character's torso/head. Fixed-pixel padding because the
+            character itself is a fixed-pixel asset (240x170 scaled 1.85x). */}
+        <div className="relative z-20 flex h-full items-center justify-center px-8 pb-[380px]">
           <div className="text-center max-w-4xl mt-[10px]">
             <h1
               className="text-6xl md:text-8xl font-serif leading-[1.02] tracking-tight text-[var(--ink)]"
@@ -1093,9 +1098,12 @@ function CafeBackground() {
       <PendantLight x="82%" />
 
       {/* Barista — rendered BEFORE counter so the counter masks her lower body.
-          Head/shoulders poke above the counter top. Paces left↔right. */}
+          Head/shoulders poke above the counter top. Paces left↔right.
+          Hidden on narrow viewports (< lg) — when the window shrinks, the
+          left-edge counter+barista crowd the centered hero copy. The center
+          character + cactus carry the scene alone at narrow widths. */}
       <div
-        className="absolute"
+        className="absolute hidden lg:block"
         style={{
           left: "0%",
           bottom: "20%",
@@ -1114,37 +1122,49 @@ function CafeBackground() {
         </div>
       </div>
 
-      {/* Counter on far left — masks barista's lower body */}
-      <CafeCounter x="-2%" />
+      {/* Counter on far left — masks barista's lower body. Hidden < lg so the
+          barista (also hidden) doesn't visually float on empty cream. */}
+      <div className="hidden lg:block">
+        <CafeCounter x="-2%" />
+      </div>
 
       {/* Tables — aligned in a single line along the floor (like the cacti
           stand on the same baseline). 1 on the LEFT past the counter, 2 on
           the RIGHT past the bench/character. Each table has chairs built in
-          so seated NPCs read as actually sitting. */}
+          so seated NPCs read as actually sitting.
+
+          Progressive responsive clipping — as the viewport narrows the side
+          tables disappear so the center character is never crowded:
+            lg (1024+): show left table at 25vw
+            xl (1280+): show right middle table at 65vw
+            2xl (1536+): show far right table at 80vw + right plant
+          Below lg, ONLY the center character (with its built-in cactus pot)
+          appears, sitting on the floor band. Pendant lights overhead stay. */}
       <div
-        className="absolute"
+        className="absolute hidden lg:block"
         style={{ left: "25vw", bottom: "12%", zIndex: 10 }}
       >
         <TableUnit />
         <SteamPuff x={40} delay={-0.4} />
       </div>
       <div
-        className="absolute"
+        className="absolute hidden xl:block"
         style={{ left: "65vw", bottom: "12%", zIndex: 10 }}
       >
         <TableUnit />
         <SteamPuff x={40} delay={0} />
       </div>
       <div
-        className="absolute"
+        className="absolute hidden 2xl:block"
         style={{ left: "80vw", bottom: "12%", zIndex: 10 }}
       >
         <TableUnit />
         <SteamPuff x={44} delay={-1.2} />
       </div>
 
-      {/* Plant on the far right wall. */}
-      <div className="absolute" style={{ right: "2%", bottom: "14%" }}>
+      {/* Plant on the far right wall. Hidden < xl — at narrower widths it
+          would sit too close to the centered hero text. */}
+      <div className="absolute hidden xl:block" style={{ right: "2%", bottom: "14%" }}>
         <PixelPlant />
       </div>
 
@@ -1154,8 +1174,13 @@ function CafeBackground() {
           duration, then either leave or stay to talk with whoever else
           happens to be at their table. Fully stateful so spawn intervals,
           drink wait time, sit duration, and interaction outcomes are all
-          randomized per NPC — not synchronized loops. */}
-      <CafeSimulation />
+          randomized per NPC — not synchronized loops.
+          Hidden < lg because the NPCs queue at the counter (hidden < lg) and
+          sit at the tables (also hidden < lg) — without those landmarks the
+          NPCs would walk to invisible destinations and look broken. */}
+      <div className="hidden lg:block">
+        <CafeSimulation />
+      </div>
     </>
   );
 }
