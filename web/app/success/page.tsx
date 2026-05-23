@@ -86,11 +86,11 @@ export default async function SuccessPage({
     }
     return (
       <ErrorShell
-        title={paid ? "Key is taking longer than usual" : "Payment still processing"}
+        title={paid ? "Your key has been sent to your email." : "Payment still processing"}
         body={
           paid
-            ? "Your payment went through, but the license key didn't generate in time. Check your email — it should already be there. If not, contact support@slapshift.app with your receipt."
-            : "Stripe hasn't confirmed the payment yet. Refresh in a few seconds, or check your email — the key will be sent the moment payment clears."
+            ? "Open the email from licenses@slapshift.app, copy your license key, then open SlapShift and paste it into the license field. Click Activate and you're in."
+            : "Stripe hasn't confirmed the payment yet. Refresh in a few seconds — your license key will be emailed the moment payment clears."
         }
       />
     );
