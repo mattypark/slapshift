@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let modeStore = ModeStore()
     private let executor = ActionExecutor()
     private let prefs = AppPreferences.shared
+    private let stats = SlapStats()
 private let licenseManager = LicenseManager()
 let motionMonitor = MotionMonitor()
     private var menuBar: MenuBarController!
@@ -391,7 +392,9 @@ let motionMonitor = MotionMonitor()
                 modeStore: modeStore,
                 motionMonitor: motionMonitor,
                 prefs: prefs,
-                onOpenSettings: { [weak self] in self?.settingsWindow.show() }
+                stats: stats,
+                onOpenSettings: { [weak self] in self?.settingsWindow.show() },
+                onSignOut: { [weak self] in self?.confirmAndSignOut() }
             )
         }
         homeWindow?.show()
@@ -458,6 +461,7 @@ let motionMonitor = MotionMonitor()
         defaults.removeObject(forKey: "onboarding.email")
         defaults.removeObject(forKey: "onboarding.usage")
         defaults.removeObject(forKey: "onboarding.otherUsageDetail")
+        stats.reset()
 
         // 3. Tear down menu bar so the gate (`installMenuBarIfReady`) holds:
         //    no icon until onboarding done AND licensed.
@@ -604,6 +608,8 @@ let motionMonitor = MotionMonitor()
                      mode.appsToQuit.count,
                      mode.urlsToOpen.count))
         executor.execute(mode)
+        let actionCount = mode.appsToOpen.count + mode.appsToQuit.count + mode.urlsToOpen.count
+        stats.recordSlap(actionCount: actionCount)
     }
 
     // MARK: - License sheet

@@ -1,4 +1,4 @@
-// HomeWindow — NSWindowController that hosts the Willow-style home dashboard.
+// HomeWindow — NSWindowController that hosts the home dashboard.
 //
 // Opens automatically after the post-purchase ActivatedStep, and is also
 // reachable from the menu bar "Show Home" item. Same NSWindow pattern as
@@ -21,16 +21,22 @@ final class HomeWindow {
     private let modeStore: ModeStore
     private let motionMonitor: MotionMonitor
     private let prefs: AppPreferences
+    private let stats: SlapStats
     private let onOpenSettings: () -> Void
+    private let onSignOut: () -> Void
 
     init(modeStore: ModeStore,
          motionMonitor: MotionMonitor,
          prefs: AppPreferences,
-         onOpenSettings: @escaping () -> Void) {
+         stats: SlapStats,
+         onOpenSettings: @escaping () -> Void,
+         onSignOut: @escaping () -> Void) {
         self.modeStore = modeStore
         self.motionMonitor = motionMonitor
         self.prefs = prefs
+        self.stats = stats
         self.onOpenSettings = onOpenSettings
+        self.onSignOut = onSignOut
     }
 
     func show() {
@@ -45,7 +51,9 @@ final class HomeWindow {
             modeStore: modeStore,
             motionMonitor: motionMonitor,
             prefs: prefs,
-            onOpenSettings: onOpenSettings
+            stats: stats,
+            onOpenSettings: onOpenSettings,
+            onSignOut: onSignOut
         )
 
         let hosting = NSHostingController(rootView: view)
@@ -59,8 +67,8 @@ final class HomeWindow {
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .hidden
         win.backgroundColor = NSColor(red: 0.925, green: 0.898, blue: 0.820, alpha: 1)
-        win.setContentSize(NSSize(width: 820, height: 640))
-        win.minSize = NSSize(width: 640, height: 520)
+        win.setContentSize(NSSize(width: 940, height: 660))
+        win.minSize = NSSize(width: 820, height: 580)
         win.center()
         win.isReleasedWhenClosed = false
         win.delegate = WindowDelegate.shared
