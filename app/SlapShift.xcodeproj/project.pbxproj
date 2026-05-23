@@ -34,6 +34,7 @@
 		B005FDDFE8055A716A4F8C1A /* README.md in CopyFiles */ = {isa = PBXBuildFile; fileRef = 12D59EB33DDB463713779E16 /* README.md */; };
 		B7E2939CC971C0FBE26F36B9 /* ModeStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F27113984C8660446039CD96 /* ModeStoreTests.swift */; };
 		BB19E488BC8EC53FC99FD1DB /* SlapClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A3DFB51F4012E086C4EA9 /* SlapClassifier.swift */; };
+		CA24FB04243458124C578454 /* SlapStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEE1904230C2B2E1DE1F7390 /* SlapStats.swift */; };
 		CFD042B1155FB9A9099A9C63 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = E414BDEB5C04907D737212F8 /* AppPreferences.swift */; };
 		D27B4FF0936F6FF75B12FF36 /* InstalledApps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5428A62AF662CAC4815FDA /* InstalledApps.swift */; };
 		D37180A9E35019402FD23D67 /* DefaultModes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4032B66080C8B624E124F997 /* DefaultModes.swift */; };
@@ -104,6 +105,7 @@
 		A4E0FCEE9B87203FAEF5C7A4 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		A67BF3C4D852AB02923C29FA /* ModeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeStore.swift; sourceTree = "<group>"; };
 		AC36EEE4FF27A04F86D8B277 /* LicenseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseSheet.swift; sourceTree = "<group>"; };
+		AEE1904230C2B2E1DE1F7390 /* SlapStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlapStats.swift; sourceTree = "<group>"; };
 		B63CA65D6847B53A8A5054AA /* OnboardingWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWindow.swift; sourceTree = "<group>"; };
 		C43A3DFB51F4012E086C4EA9 /* SlapClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlapClassifier.swift; sourceTree = "<group>"; };
 		C759EF5AF9C852909AAEC6CB /* LicenseValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseValidator.swift; sourceTree = "<group>"; };
@@ -124,6 +126,14 @@
 				08EE4E57BA4FD6FE0E89EB5C /* Theme.swift */,
 			);
 			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		238A47407F3A5FDA9DC71468 /* Stats */ = {
+			isa = PBXGroup;
+			children = (
+				AEE1904230C2B2E1DE1F7390 /* SlapStats.swift */,
+			);
+			path = Stats;
 			sourceTree = "<group>";
 		};
 		4305E32F6A19DE623AF67E02 /* Tests */ = {
@@ -176,6 +186,7 @@
 				B592CBFA361863BDA9057DB6 /* Modes */,
 				B1D8D9414A7815B2BAC0994C /* Motion */,
 				B13DF4727DA122A4B1900391 /* Settings */,
+				238A47407F3A5FDA9DC71468 /* Stats */,
 				EC5F1EF2ECAC3A230F097129 /* UI */,
 			);
 			name = Sources;
@@ -402,6 +413,7 @@
 				46009268B5479C77F852C0AF /* SettingsView.swift in Sources */,
 				FF117B94FFCFCC3FFE22B901 /* SettingsWindow.swift in Sources */,
 				BB19E488BC8EC53FC99FD1DB /* SlapClassifier.swift in Sources */,
+				CA24FB04243458124C578454 /* SlapStats.swift in Sources */,
 				FE7C27E12DC8C5B200913925 /* Theme.swift in Sources */,
 				440BDDB6457BC4EC1468871B /* main.swift in Sources */,
 			);
