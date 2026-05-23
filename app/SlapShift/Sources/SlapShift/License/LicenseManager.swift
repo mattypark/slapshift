@@ -97,7 +97,34 @@ final class LicenseManager: ObservableObject {
     /// Called from the in-app paywall and from the slapshift:// URL handler.
     /// On success, the record is persisted and `state` flips to `.licensed`.
     func tryActivate(key rawKey: String) async -> Result<LicenseRecord, LicenseValidationFailure> {
-        let key = rawKey.uppercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        // Aggressively strip anything that isn't [A-Z0-9] before sending. Gmail
+        // and other webmail clients routinely smuggle zero-width spaces,
+        // non-breaking spaces, and en/em-dashes into the clipboard when users
+        // copy styled monospace text — keeping those would make the server
+        // reject a perfectly valid key as `bad_format`. Server does the same
+        // normalization, but doing it here too means the network round-trip
+        // can't be poisoned by a weird codepoint.
+        let upper = rawKey.uppercased()
+        let allowed = Set("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+        let stripped = String(upper.unicodeScalars.compactMap { scalar -> Character? in
+            let s = String(scalar)
+            return s.count == 1 && allowed.contains(Character(s)) ? Character(s) : nil
+        })
+        // Re-insert canonical hyphens so the server sees the same shape the
+        // user pasted. The server strips them again anyway, but this keeps
+        // logs and any future format checks consistent.
+        let key: String
+        if stripped.hasPrefix("SLAP") && stripped.count == 32 {
+            let body = stripped.dropFirst(4)
+            let groups = stride(from: 0, to: body.count, by: 4).map { offset -> String in
+                let start = body.index(body.startIndex, offsetBy: offset)
+                let end = body.index(start, offsetBy: min(4, body.count - offset))
+                return String(body[start..<end])
+            }
+            key = "SLAP-" + groups.joined(separator: "-")
+        } else {
+            key = stripped
+        }
         state = .validating
         let machineId = MachineId.current
         let result = await LicenseValidator.validate(key: key, machineId: machineId)

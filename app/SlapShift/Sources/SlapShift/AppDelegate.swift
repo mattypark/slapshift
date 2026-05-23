@@ -234,10 +234,26 @@ let motionMonitor = MotionMonitor()
             return
         }
         let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        guard let key = comps?.queryItems?.first(where: { $0.name == "key" })?.value,
-              !key.isEmpty else {
+        let key = comps?.queryItems?.first(where: { $0.name == "key" })?.value ?? ""
+
+        // If onboarding is up, route the key into the inline paywall field and
+        // fire activation there. Popping a separate LicenseSheet alongside the
+        // onboarding paywall was the source of the "two windows" UX bug — the
+        // buyer would see the same pitch + Activate button in two places.
+        if let state = onboardingState {
+            if !key.isEmpty {
+                state.licenseInputKey = key
+                state.activateLicense()
+            }
+            onboardingWindow?.window?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        if key.isEmpty {
             print("slapshift://license missing ?key= param")
-            // Still show the sheet so the user can paste manually.
+            // No onboarding window — fall back to the standalone sheet so the
+            // user can paste manually.
             presentLicenseSheet(prefilling: nil)
             return
         }

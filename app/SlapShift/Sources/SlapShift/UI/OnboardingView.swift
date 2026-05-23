@@ -586,6 +586,16 @@ private struct PaywallStep: View {
                 .italic()
                 .foregroundStyle(Brand.accent)
 
+            // Pitch bullets — folded in from the old standalone LicenseSheet
+            // so the buyer sees value + price + actions in one window instead
+            // of two. Kept compact to leave the $9.99 hero as the focal point.
+            VStack(alignment: .leading, spacing: 8) {
+                paywallPitchRow("Slap to switch your whole workspace")
+                paywallPitchRow("Three modes out of the box, fully editable")
+                paywallPitchRow("Apple Silicon only — runs on your existing Mac")
+            }
+            .frame(maxWidth: 320, alignment: .leading)
+
             // Promo / coupon code — Stripe Checkout enforces the actual discount
             // server-side; this field is a sanity gate + UX hint. The trimmed
             // code is forwarded to /api/checkout as ?promo=… so Stripe can apply
@@ -697,12 +707,26 @@ private struct PaywallStep: View {
             }
             .frame(maxWidth: 280)
 
-            Button("Other options") { state.openLicenseSheet() }
-                .buttonStyle(.plain)
-                .font(.slapMeta(size: 11))
-                .foregroundStyle(Brand.mute)
-                .underline()
-                .padding(.top, 4)
+            // "Other options" link removed — used to open a separate
+            // LicenseSheet window with duplicate pitch + buy/activate. All
+            // of that lives in this view now, so there's no second surface
+            // to send the user to.
+        }
+    }
+
+    /// Bullet row for the pitch list. Matches the LicenseSheet styling so
+    /// brand voice stays consistent when we later show this same view in
+    /// other contexts.
+    @ViewBuilder
+    private func paywallPitchRow(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Text("•")
+                .font(.slapBody(size: 13))
+                .foregroundStyle(Brand.accent)
+            Text(text)
+                .font(.slapBody(size: 13))
+                .foregroundStyle(Brand.ink)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
