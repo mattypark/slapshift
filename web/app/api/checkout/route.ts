@@ -38,7 +38,16 @@ async function createCheckoutSession(opts: CheckoutOptions = {}) {
     line_items: [{ price: env.STRIPE_PRICE_ID, quantity: 1 }],
     success_url: `${env.NEXT_PUBLIC_SITE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${env.NEXT_PUBLIC_SITE_URL}/?canceled=1`,
-    billing_address_collection: "auto",
+    // Required (not "auto"): forces Stripe to render the full street/city/
+    // state/postal/country form on the right rail. "auto" was hiding the
+    // address block entirely for US digital goods, which made the page
+    // look bare next to competitors (SlapMac/Polar). The address also
+    // gives Stripe's fraud signals more to chew on for $9.99 cards.
+    billing_address_collection: "required",
+    // Surface a phone field too — matches the polish of Polar's checkout
+    // and is one more data point for chargeback defense without adding
+    // meaningful friction (one extra line on a form they're already filling).
+    phone_number_collection: { enabled: true },
     // Promotion codes always allowed at checkout. Buyers may have a code from
     // a launch DM, Twitter post, or friend referral and need the field visible
     // on the Stripe page regardless of whether they came from the desktop app

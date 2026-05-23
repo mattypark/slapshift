@@ -9,7 +9,6 @@
 //   demoTwo      — "Slap your MacBook twice" → a different example mode fires
 //   demoThree    — "Slap three times" → a third example mode fires
 //   customize    — "You can edit all of this in Settings"
-//   tutorial     — paged video-placeholder slides (Willow-style)
 //   paywall      — $9.99 one-time, Buy now (with optional promo)
 //   activated    — "Hey, $name. You're all set." post-purchase celebration → home
 //
@@ -128,7 +127,6 @@ struct OnboardingView: View {
                                     title: "And three slaps — go",
                                     subtitle: "Tap-tap-tap, fast. Three slaps map to a third mode later — let's make sure we feel them.")
         case .customize:   CustomizeStep()
-        case .tutorial:    TutorialStep(state: state)
         case .paywall:     PaywallStep(state: state)
         case .activated:   ActivatedStep(state: state, onFinish: onFinish)
         }
@@ -468,105 +466,6 @@ private struct CustomizeStep: View {
     }
 }
 
-// MARK: - Tutorial step (paged video placeholders, Willow-style)
-
-private struct TutorialStep: View {
-    @ObservedObject var state: OnboardingState
-
-    private let slides: [(title: String, caption: String, symbol: String)] = [
-        ("The gesture",
-         "A single firm slap on the palm rest. Not the screen, not the keyboard.",
-         "hand.tap.fill"),
-        ("One slap = your work mode",
-         "Open your code editor, terminal, and dev URLs in one shot. Your default coding setup.",
-         "chevron.left.forwardslash.chevron.right"),
-        ("Two slaps = applications",
-         "School apps, job tabs, whatever — fires the second mode in under a second.",
-         "graduationcap.fill"),
-        ("Three slaps = wind down",
-         "End the day: close work apps, open Notes, queue up music. One gesture.",
-         "moon.stars.fill"),
-    ]
-
-    private var currentSlide: Int { state.tutorialPage }
-    private var slide: (title: String, caption: String, symbol: String) {
-        slides[min(currentSlide, slides.count - 1)]
-    }
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("How it works")
-                .font(.slapTitle(size: 22))
-                .foregroundStyle(Brand.ink)
-
-            // Video placeholder. Real demo videos will land here later — one
-            // per slide. Until then, an icon + caption stands in.
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Brand.paper)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Brand.rule.opacity(0.6), lineWidth: 1)
-                    )
-                VStack(spacing: 14) {
-                    Image(systemName: slide.symbol)
-                        .font(.system(size: 50, weight: .light))
-                        .foregroundStyle(Brand.accent)
-                    Text("Demo video coming soon")
-                        .font(.slapMeta(size: 10))
-                        .foregroundStyle(Brand.whisper)
-                }
-            }
-            .frame(maxWidth: 520, maxHeight: 240)
-            .aspectRatio(16/9, contentMode: .fit)
-
-            VStack(spacing: 6) {
-                Text(slide.title)
-                    .font(.system(size: 16, weight: .semibold, design: .serif))
-                    .foregroundStyle(Brand.ink)
-                Text(slide.caption)
-                    .font(.slapBody(size: 12))
-                    .foregroundStyle(Brand.mute)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 460)
-                    .lineSpacing(3)
-            }
-
-            // Page indicator + in-step prev/next.
-            HStack(spacing: 16) {
-                Button {
-                    if state.tutorialPage > 0 { state.tutorialPage -= 1 }
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(state.tutorialPage > 0 ? Brand.ink : Brand.rule)
-                }
-                .buttonStyle(.plain)
-                .disabled(state.tutorialPage == 0)
-
-                HStack(spacing: 6) {
-                    ForEach(0..<slides.count, id: \.self) { i in
-                        Circle()
-                            .fill(i == state.tutorialPage ? Brand.accent : Brand.rule.opacity(0.5))
-                            .frame(width: 6, height: 6)
-                    }
-                }
-
-                Button {
-                    if state.tutorialPage < slides.count - 1 { state.tutorialPage += 1 }
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(state.tutorialPage < slides.count - 1 ? Brand.ink : Brand.rule)
-                }
-                .buttonStyle(.plain)
-                .disabled(state.tutorialPage >= slides.count - 1)
-            }
-            .padding(.top, 4)
-        }
-    }
-}
-
 private struct PaywallStep: View {
     @ObservedObject var state: OnboardingState
 
@@ -876,7 +775,7 @@ final class OnboardingState: ObservableObject {
 
     enum Step: Int, CaseIterable {
         case welcome, name, usage, permission,
-             demoOne, demoTwo, demoThree, tutorial, customize, paywall,
+             demoOne, demoTwo, demoThree, customize, paywall,
              activated
         var index: Int { rawValue }
 
@@ -932,9 +831,6 @@ final class OnboardingState: ObservableObject {
     @Published var demoOneResult: DemoResult? = nil
     @Published var demoTwoResult: DemoResult? = nil
     @Published var demoThreeResult: DemoResult? = nil
-
-    /// Tutorial step current slide.
-    @Published var tutorialPage: Int = 0
 
     /// Promo / coupon code state. The code itself is plain user input; the
     /// status is set when the user taps Apply. Stripe enforces the actual
@@ -1017,7 +913,6 @@ final class OnboardingState: ObservableObject {
         case .demoTwo:     return demoTwoResult == .success
         case .demoThree:   return demoThreeResult == .success
         case .customize:   return true
-        case .tutorial:    return true
         case .paywall:     return true  // footer hidden; PaywallStep has its own CTAs
         case .activated:   return true  // footer hidden; ActivatedStep has its own CTA
         }
