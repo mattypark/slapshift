@@ -18,14 +18,17 @@ export default function Landing() {
       <section className="relative h-screen overflow-hidden">
         <CafeBackground />
 
-        {/* Top nav — logo only, anchored top-left */}
-        <div className="absolute top-0 left-0 z-50 px-[22px] py-[14px]">
+        {/* Brand mark — anchored left, vertically aligned with the H1
+            headline (~38% from top) instead of floating in dead space at
+            the very top. Sized down so it doesn't fight the headline for
+            attention. Stays well clear of the seated PixelCharacter. */}
+        <div className="absolute top-[38%] left-0 -translate-y-1/2 z-50 px-[40px]">
           <a href="#" className="inline-flex items-center" aria-label="SlapShift">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/realslapshift.png"
               alt="SlapShift"
-              className="h-20 md:h-55 w-auto pixelated"
+              className="h-12 md:h-16 w-auto pixelated"
             />
           </a>
         </div>

@@ -158,6 +158,38 @@ let motionMonitor = MotionMonitor()
         }
     }
 
+    // MARK: - Re-launch (Finder / Spotlight / Dock click while running)
+
+    /// Called when the user opens SlapShift again while it's already running.
+    /// Without this handler, double-clicking the .app does nothing visible —
+    /// macOS just brings the (windowless, LSUIElement) process to the front,
+    /// the user sees no window, no Dock bounce, no menu bar change, and
+    /// concludes the launch failed. They quit and retry, which only works
+    /// because the second launch is a real cold start.
+    ///
+    /// Fix: surface a window every time. The right window depends on state.
+    /// - Onboarding window already open → just focus it (don't rebuild state).
+    /// - Onboarding not finished, or unlicensed → re-present onboarding so
+    ///   the user lands on the next step they need to take.
+    /// - Fully set up → show the Home dashboard, same as menu bar "Show Home".
+    ///
+    /// Returning false tells AppKit "I handled this, don't auto-create a
+    /// window for me." Both window types call setActivationPolicy(.regular)
+    /// inside show(), so the app briefly appears in the Dock too — giving the
+    /// user the visual feedback they expect from a normal app launch.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if onboardingWindow != nil {
+            onboardingWindow?.show()
+            return false
+        }
+        if !onboardingComplete || !licenseManager.state.isLicensed {
+            presentOnboarding()
+            return false
+        }
+        showHome()
+        return false
+    }
+
     // MARK: - Main menu (enables Cmd+C/V/X/A in TextFields)
 
     /// Build a minimal NSMainMenu with App + Edit submenus. LSUIElement apps
