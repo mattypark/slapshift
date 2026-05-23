@@ -141,14 +141,20 @@ let motionMonitor = MotionMonitor()
         // Onboarding gate — runs AFTER the full app stack is wired so the test-slap
         // step can hook into the live classifier callbacks via `onboardingState`.
         if !onboardingComplete {
+            // Skip the license bootstrap entirely on first run. A fresh user
+            // has no Keychain entry to read, so calling SecItemCopyMatching
+            // here only risks the macOS ACL prompt firing before any UI has
+            // appeared (e.g. after a re-signed build). The bootstrap will
+            // fire from the onboarding `finish` closure after they've gone
+            // through the flow and seen what the app is.
             presentOnboarding()
-        }
-
-        // License bootstrap. Loads the Keychain cache and (if grace expired)
-        // talks to the server in the background. Doesn't block startup —
-        // the paywall fires on the first real slap if the user is unlicensed.
-        Task { @MainActor in
-            await licenseManager.bootstrap()
+        } else {
+            // Returning user — they've onboarded before, so reading the
+            // Keychain license cache is expected and the prompt (if any
+            // appears) makes sense in context.
+            Task { @MainActor in
+                await licenseManager.bootstrap()
+            }
         }
     }
 
