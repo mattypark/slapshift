@@ -58,13 +58,27 @@ export function normalizeKey(raw: string): string {
   return s;
 }
 
-/** Returns true if the raw input matches our format (after normalization). */
+/** Returns true if the raw input matches our format.
+ *
+ * Important: we cannot use the full `normalizeKey` here because its
+ * Crockford lookalike substitution (`[IL] -> 1`) corrupts the literal
+ * "SLAP" prefix into "S1AP", which then fails the `startsWith("SLAP")`
+ * check and rejects every legitimately-formatted key. So we strip
+ * clipboard junk + uppercase, verify the prefix on the raw bytes, then
+ * apply Crockford substitutions only to the 28-char body.
+ *
+ * `normalizeKey` itself is left untouched so that previously-issued
+ * licenses (whose `key_hash` was computed off the legacy
+ * "S1AP..." normalized form) continue to match in the DB. */
 export function looksLikeKey(raw: string): boolean {
-  const n = normalizeKey(raw);
-  // After normalize: "SLAP" + 28 base32 chars = 32 chars total
-  if (n.length !== 4 + GROUPS * GROUP_LEN) return false;
-  if (!n.startsWith("SLAP")) return false;
-  const body = n.slice(4);
+  const stripped = raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (stripped.length !== 4 + GROUPS * GROUP_LEN) return false;
+  if (!stripped.startsWith("SLAP")) return false;
+  const body = stripped
+    .slice(4)
+    .replace(/O/g, "0")
+    .replace(/[IL]/g, "1")
+    .replace(/U/g, "V");
   for (const c of body) {
     if (!CROCKFORD.includes(c)) return false;
   }
