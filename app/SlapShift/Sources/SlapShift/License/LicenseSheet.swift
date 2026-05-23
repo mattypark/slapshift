@@ -126,22 +126,40 @@ private struct LicenseSheetView: View {
                     Text("Already have a key?")
                         .font(.system(size: 13, weight: .semibold, design: .serif))
                         .foregroundStyle(Brand.ink)
-                    TextField("SLAP-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX", text: $key)
-                        .textFieldStyle(.plain)
-                        .font(.slapBody(size: 12))
-                        .foregroundStyle(Brand.ink)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(Brand.paper)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .stroke(Brand.rule, lineWidth: 1)
-                        )
-                        .disableAutocorrection(true)
-                        .disabled(submitting)
+                    // macOS 13's native TextField placeholder paints a near-white
+                    // color we can't override, so it disappears on cream. Same
+                    // ZStack overlay trick OnboardingView uses to keep the
+                    // SLAP-XXXX hint visible.
+                    ZStack(alignment: .leading) {
+                        if key.isEmpty {
+                            Text("SLAP-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX")
+                                .font(.slapBody(size: 12))
+                                .foregroundStyle(Brand.ink.opacity(0.42))
+                                .padding(.horizontal, 12)
+                                .allowsHitTesting(false)
+                        }
+                        TextField("", text: $key)
+                            .textFieldStyle(.plain)
+                            .font(.slapBody(size: 12))
+                            .foregroundStyle(Brand.ink)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .disableAutocorrection(true)
+                            .disabled(submitting)
+                            .onSubmit {
+                                if !key.trimmingCharacters(in: .whitespaces).isEmpty && !submitting {
+                                    Task { await activate() }
+                                }
+                            }
+                    }
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Brand.paper)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(Brand.rule, lineWidth: 1)
+                    )
                     if let errorMessage {
                         Text(errorMessage)
                             .font(.slapBody(size: 11))

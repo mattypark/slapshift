@@ -24,8 +24,34 @@ export function AutoActivate({ deepLink }: { deepLink: string }) {
   useEffect(() => {
     if (firedRef.current) return;
     firedRef.current = true;
+    // Anchor.click() is more reliable than window.location.href for custom
+    // schemes. Chrome/Safari treat assigning location.href to a non-http
+    // scheme as gesture-less navigation and often block it silently. A
+    // synthesized anchor click is treated as a real user-initiated link
+    // activation and triggers macOS's "Open SlapShift?" handoff.
+    // We keep location.href as a final fallback in case the anchor route
+    // is filtered (e.g. in-app webviews).
     const t = setTimeout(() => {
-      window.location.href = deepLink;
+      try {
+        const a = document.createElement("a");
+        a.href = deepLink;
+        a.rel = "noopener";
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch {
+        /* fall through */
+      }
+      // Belt + suspenders: if the anchor click didn't navigate (some
+      // browsers throw silently), still try location.href a beat later.
+      window.setTimeout(() => {
+        try {
+          window.location.href = deepLink;
+        } catch {
+          /* user can still click the manual Activate button */
+        }
+      }, 250);
     }, 400);
     return () => clearTimeout(t);
   }, [deepLink]);

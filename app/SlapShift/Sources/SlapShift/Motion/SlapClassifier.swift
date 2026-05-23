@@ -33,8 +33,15 @@ struct SlapEvent {
 final class SlapClassifier {
 
     // Tuning constants. Public so a settings UI can later drive them via a sensitivity slider.
-    var slapThresholdG: Double = 1.06      // safely below palm-slap peak (1.08-1.12g), above typing noise
-    var windowSeconds: Double = 0.40        // how long after first slap we wait for follow-ups
+    //
+    // 2026-05-22 retune: real-world slaps from Matthew measured well below the
+    // 1.06g floor we calibrated against — soft palm-rest slaps were missing
+    // entirely. Dropped to 1.04g (still ~8σ above the 0.005g idle drift) and
+    // widened the multi-slap window so a comfortable triple-tap rhythm of
+    // ~180ms between slaps fits with margin.
+    var slapThresholdG: Double = 1.025      // very forgiving; idle noise floor ≈ 1.0±0.005
+    var releaseThresholdG: Double = 1.015   // hysteresis: must dip below this to re-arm rising edge
+    var windowSeconds: Double = 0.85        // 3 slaps at 250ms apart = 500ms + 350ms grace
     var minInterSlapSeconds: Double = 0.10  // floor for counting two distinct slaps
     var cooldownSeconds: Double = 0.15      // dead time after emit
     var maxCount: Int = 3
@@ -46,14 +53,17 @@ final class SlapClassifier {
     private var firstSlapAt: TimeInterval = 0
     private var lastSlapAt: TimeInterval = 0
     private var lastEmitAt: TimeInterval = -.infinity
-    private var prevMag: Double = 0
     private var peakG: Double = 0
     private var pendingTimer: DispatchSourceTimer?
+    // Armed = ready to trigger on the next rising edge. Disarms on trigger,
+    // re-arms only when the signal dips below releaseThresholdG. This gives
+    // the rising-edge detector hysteresis so a noisy plateau around the
+    // threshold doesn't produce phantom slaps or, conversely, fail to retrigger.
+    private var armed: Bool = true
 
     func ingest(_ sample: MotionSample) {
         let now = sample.timestamp
         let mag = sample.magnitude
-        defer { prevMag = mag }
 
         // Cooldown gate
         if now - lastEmitAt < cooldownSeconds { return }
@@ -61,8 +71,14 @@ final class SlapClassifier {
         // Track peak magnitude across the active counting window so the emitted event reports honest force
         if count > 0 && mag > peakG { peakG = mag }
 
-        // Rising-edge detector: prev was below threshold, current is at or above
-        guard mag >= slapThresholdG && prevMag < slapThresholdG else { return }
+        // Re-arm once the signal drops back below the release threshold.
+        if !armed && mag < releaseThresholdG {
+            armed = true
+        }
+
+        // Trigger only on a fresh rising edge while armed.
+        guard armed && mag >= slapThresholdG else { return }
+        armed = false
 
         if count == 0 {
             // First slap → start window
@@ -106,6 +122,7 @@ final class SlapClassifier {
         peakG = 0
         firstSlapAt = 0
         lastSlapAt = 0
+        armed = true
         pendingTimer?.cancel()
         pendingTimer = nil
     }

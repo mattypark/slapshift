@@ -2,8 +2,7 @@
 //
 // Step map (left→right):
 //   welcome      — centered logo + "Slap your Mac, workflow maxed." + Continue
-//   signin       — Continue with Google / Continue with Apple
-//   name         — "What should we call you?" + email confirmation
+//   name         — "What should we call you?" + email (for receipt + updates)
 //   usage        — multi-select cards: what will you use this for
 //   permission   — grant Input Monitoring (motion sensor)
 //   demoOne      — "Slap your MacBook once" → a real example mode fires
@@ -11,7 +10,8 @@
 //   demoThree    — "Slap three times" → a third example mode fires
 //   customize    — "You can edit all of this in Settings"
 //   tutorial     — paged video-placeholder slides (Willow-style)
-//   paywall      — $9.99 one-time, Buy now (with optional promo) → Finish
+//   paywall      — $9.99 one-time, Buy now (with optional promo)
+//   activated    — "Hey, $name. You're all set." post-purchase celebration → home
 //
 // Demo steps execute REAL modes via ActionExecutor (apps open, URLs open). The
 // slap routing in AppDelegate.handleSlap watches the current onboarding step
@@ -25,8 +25,9 @@
 // Theme: matches the slapshift.app website (Brand.cream background, accent
 // red, serif headlines, monospace body). See Theme.swift for tokens.
 //
-// Auth: Phase 1 uses StubAuthService — buttons look real, response is faked.
-// Phase 2 replaces with SupabaseAuthService and the same public surface.
+// Identity: name + email captured on the NameStep. Email is the durable
+// handle for the license + mailing list (Resend). No SSO — license keys
+// are emailed after Stripe Checkout completes.
 
 import SwiftUI
 
@@ -36,6 +37,15 @@ struct OnboardingView: View {
 
     var onFinish: () -> Void
 
+    /// True after the user has been parked on a slap-demo step for 20 seconds
+    /// without succeeding. Lets us surface a Skip escape hatch so a flaky
+    /// accelerometer reading doesn't trap the buyer on the gesture demo.
+    /// Resets every time `state.step` changes — see `.task(id:)` below.
+    @State private var skipVisible: Bool = false
+
+    /// Seconds the user has to spend stuck on a demo step before Skip fades in.
+    private let skipDelaySeconds: UInt64 = 20
+
     var body: some View {
         ZStack(alignment: .top) {
             Brand.cream.ignoresSafeArea()
@@ -43,13 +53,19 @@ struct OnboardingView: View {
             VStack(spacing: 0) {
                 header
                     .padding(.horizontal, 28)
-                    .padding(.top, 24)
+                    .padding(.top, 18)
 
+                // Flexible top + bottom spacers center the content
+                // geometrically between header and footer. The header
+                // (logo + step dots) is always pinned at the top regardless
+                // of how the content vertically composes — so the logo
+                // stays in its top-left anchor while the welcome headline
+                // sits dead-center in the available content well.
                 Spacer(minLength: 0)
 
                 content
                     .padding(.horizontal, 48)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
 
                 Spacer(minLength: 0)
 
@@ -58,14 +74,36 @@ struct OnboardingView: View {
                     .padding(.bottom, 22)
             }
         }
-        .frame(width: 720, height: 640)
+        .frame(minWidth: 560, minHeight: 520)
+        // Reset + arm the skip timer on every step change. Cancels automatically
+        // when the step changes again (SwiftUI restarts the task), so leaving a
+        // demo step early correctly cancels the pending Skip reveal.
+        .task(id: state.step) {
+            skipVisible = false
+            guard Self.isDemoStep(state.step) else { return }
+            do {
+                try await Task.sleep(nanoseconds: skipDelaySeconds * 1_000_000_000)
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    skipVisible = true
+                }
+            } catch {
+                // Cancelled (step changed). Nothing to do.
+            }
+        }
+    }
+
+    private static func isDemoStep(_ step: OnboardingState.Step) -> Bool {
+        switch step {
+        case .demoOne, .demoTwo, .demoThree: return true
+        default: return false
+        }
     }
 
     // MARK: - Header (logo + progress dots)
 
     private var header: some View {
         HStack {
-            BrandLogo(height: 64)
+            BrandLogo(height: 88)
             Spacer()
             StepDots(current: state.step.index, total: OnboardingState.Step.allCases.count)
         }
@@ -77,7 +115,6 @@ struct OnboardingView: View {
     private var content: some View {
         switch state.step {
         case .welcome:     WelcomeStep()
-        case .signin:      SignInStep(state: state)
         case .name:        NameStep(state: state)
         case .usage:       UsageStep(state: state)
         case .permission:  PermissionStep(state: state)
@@ -93,6 +130,7 @@ struct OnboardingView: View {
         case .customize:   CustomizeStep()
         case .tutorial:    TutorialStep(state: state)
         case .paywall:     PaywallStep(state: state)
+        case .activated:   ActivatedStep(state: state, onFinish: onFinish)
         }
     }
 
@@ -100,7 +138,7 @@ struct OnboardingView: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
-            if state.step != .welcome && state.step != .signin {
+            if state.step != .welcome && state.step != .activated {
                 Button("Back") { state.back() }
                     .buttonStyle(OutlineButtonStyle())
                     .keyboardShortcut(.escape)
@@ -108,10 +146,21 @@ struct OnboardingView: View {
 
             Spacer()
 
-            // Steps with their own primary CTAs (signin uses SSO buttons,
-            // paywall has Buy/Try free) suppress the global Continue button so
-            // we don't end up with two competing primary actions on screen.
-            if state.step != .signin && state.step != .paywall {
+            // Steps with their own primary CTAs (paywall has Buy/Try free,
+            // activated has Take me home) suppress the global Continue
+            // button so we don't end up with two competing primary actions
+            // on screen.
+            if state.step != .paywall && state.step != .activated {
+                // Skip escape hatch — only on slap-demo steps, only after the
+                // user has been stuck for `skipDelaySeconds` without nailing
+                // the count, and only while Continue is still gated. Fades in
+                // so it doesn't look like a permanent first-class action.
+                if Self.isDemoStep(state.step) && skipVisible && !state.canAdvance {
+                    Button("Skip") { state.next() }
+                        .buttonStyle(OutlineButtonStyle())
+                        .transition(.opacity)
+                }
+
                 Button(action: advance) {
                     Text("Continue")
                 }
@@ -159,90 +208,40 @@ private struct WelcomeStep: View {
     }
 }
 
-private struct SignInStep: View {
-    @ObservedObject var state: OnboardingState
-
-    var body: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 8) {
-                Text("Sign in to continue")
-                    .font(.slapTitle(size: 26))
-                    .foregroundStyle(Brand.ink)
-                Text("We use this so your license follows you across Macs.")
-                    .font(.slapBody(size: 12))
-                    .foregroundStyle(Brand.mute)
-                    .multilineTextAlignment(.center)
-            }
-
-            VStack(spacing: 12) {
-                Button(action: { Task { await state.signIn(with: .google) } }) {
-                    HStack(spacing: 12) {
-                        GoogleLogo(size: 18)
-                        Text("Continue with Google")
-                        Spacer()
-                    }
-                }
-                .buttonStyle(SSOButtonStyle())
-                .disabled(state.signingIn)
-
-                Button(action: { Task { await state.signIn(with: .apple) } }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "applelogo")
-                            .font(.system(size: 16))
-                            .foregroundStyle(Brand.ink)
-                        Text("Continue with Apple")
-                        Spacer()
-                    }
-                }
-                .buttonStyle(SSOButtonStyle())
-                .disabled(state.signingIn)
-            }
-            .frame(maxWidth: 360)
-
-            if state.signingIn {
-                HStack(spacing: 8) {
-                    ProgressView().scaleEffect(0.7)
-                    Text("Connecting to \(state.pendingProvider?.displayName ?? "")…")
-                        .font(.slapMeta(size: 11))
-                        .foregroundStyle(Brand.mute)
-                }
-                .padding(.top, 4)
-            } else if let err = state.signInError {
-                Text(err)
-                    .font(.slapMeta(size: 11))
-                    .foregroundStyle(Brand.accent)
-            }
-
-            Button("← Back to welcome") { state.back() }
-                .buttonStyle(.plain)
-                .font(.slapMeta(size: 11))
-                .foregroundStyle(Brand.mute)
-                .padding(.top, 8)
-        }
-        .frame(maxWidth: 420)
-    }
-}
-
 private struct NameStep: View {
     @ObservedObject var state: OnboardingState
 
     var body: some View {
         VStack(spacing: 22) {
             VStack(spacing: 6) {
-                Text("What should we call you?")
+                Text("Tell us where to send your license")
                     .font(.slapTitle(size: 24))
                     .foregroundStyle(Brand.ink)
-                Text("First name, nickname — whatever you go by.")
+                Text("Your license key arrives by email. We'll also let you know when new stuff ships.")
                     .font(.slapBody(size: 12))
                     .foregroundStyle(Brand.mute)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 420)
             }
 
             VStack(spacing: 14) {
-                LabeledField(label: "Name", text: $state.name, placeholder: "John")
+                // onSubmit on both fields lets the user press Enter while
+                // typing to advance, instead of having to mouse over to
+                // Continue. The shared `submitIfAble` callback no-ops when
+                // the form is still invalid so an early Enter doesn't skip
+                // past validation.
+                LabeledField(label: "Name", text: $state.name, placeholder: "John",
+                             onSubmit: { submitIfAble() })
+                LabeledField(label: "Email", text: $state.email, placeholder: "you@example.com",
+                             onSubmit: { submitIfAble() })
             }
             .frame(maxWidth: 380)
         }
         .frame(maxWidth: 480)
+    }
+
+    private func submitIfAble() {
+        if state.canAdvance { state.next() }
     }
 }
 
@@ -255,7 +254,7 @@ private struct UsageStep: View {
         ("writing",  "pencil.and.scribble",  "Writing",           "Quit distractions, open the doc."),
         ("designing","paintpalette.fill",    "Designing",         "Figma + reference tabs."),
         ("research", "books.vertical.fill",  "Research",          "Notes + sources + zen mode."),
-        ("fun",      "sparkles",             "Just curious",      "I want to slap my laptop."),
+        ("other",    "sparkles",             "Other",             "Something else — tell us below."),
     ]
 
     var body: some View {
@@ -283,7 +282,23 @@ private struct UsageStep: View {
                 }
             }
             .frame(maxWidth: 520)
+
+            // "Other" branch: when the user picks the catch-all card, ask them
+            // what it actually is. The free-text answer ships to Supabase
+            // alongside the structured usage tags so we can read what real
+            // users want and add it as a first-class card later.
+            if state.usage.contains("other") {
+                LabeledField(
+                    label: "Why other?",
+                    text: $state.otherUsageDetail,
+                    placeholder: "Tell us what you'll use it for",
+                    onSubmit: { if state.canAdvance { state.next() } }
+                )
+                .frame(maxWidth: 520)
+                .transition(.opacity)
+            }
         }
+        .animation(.easeOut(duration: 0.18), value: state.usage.contains("other"))
     }
 }
 
@@ -627,13 +642,126 @@ private struct PaywallStep: View {
             .keyboardShortcut(.return)
             .frame(maxWidth: 280)
 
-            Button("I already have a license") { state.openLicenseSheet() }
+            // Inline license activation — for buyers who already paid and
+            // have the key from their Resend email. Lives right under the
+            // promo code so it's discoverable without needing to find the
+            // "I already have a license" link. Resilient fallback when the
+            // slapshift:// auto-activate from /success didn't fire.
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    ZStack(alignment: .leading) {
+                        if state.licenseInputKey.isEmpty {
+                            Text("License key (if you already paid)")
+                                .font(.slapBody(size: 13))
+                                .foregroundStyle(Brand.ink.opacity(0.42))
+                                .padding(.horizontal, 12)
+                                .allowsHitTesting(false)
+                        }
+                        TextField("", text: $state.licenseInputKey)
+                            .textFieldStyle(.plain)
+                            .font(.slapBody(size: 13))
+                            .foregroundStyle(Brand.ink)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .disabled(state.licenseActivating)
+                            .onSubmit {
+                                if !state.licenseInputKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                    && !state.licenseActivating {
+                                    state.activateLicense()
+                                }
+                            }
+                    }
+                    .frame(height: 38)
+                    .background(Brand.paper)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(Brand.rule.opacity(0.6), lineWidth: 1)
+                    )
+                    .cornerRadius(6)
+
+                    Button(state.licenseActivating ? "…" : "Activate") {
+                        state.activateLicense()
+                    }
+                    .buttonStyle(OutlineButtonStyle())
+                    .disabled(
+                        state.licenseActivating ||
+                        state.licenseInputKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    )
+                }
+
+                if let err = state.licenseActivationError {
+                    Text(err)
+                        .font(.slapMeta(size: 10))
+                        .foregroundStyle(Brand.accent)
+                }
+            }
+            .frame(maxWidth: 280)
+
+            Button("Other options") { state.openLicenseSheet() }
                 .buttonStyle(.plain)
                 .font(.slapMeta(size: 11))
                 .foregroundStyle(Brand.mute)
                 .underline()
                 .padding(.top, 4)
         }
+    }
+}
+
+// MARK: - Activated (post-purchase celebration)
+//
+// Reached after the buyer pays on the Stripe Checkout page, the webhook mints
+// the license key, the /success page redirects via the slapshift:// custom
+// scheme, and LicenseManager.tryActivate flips the state to .licensed. The
+// AppDelegate watches that state during onboarding and advances the step to
+// `.activated` once the flip happens — so the buyer lands here automatically
+// without manually clicking anything. The Continue CTA dismisses the
+// onboarding window and opens the HomeWindow.
+private struct ActivatedStep: View {
+    @ObservedObject var state: OnboardingState
+    var onFinish: () -> Void
+
+    private var firstName: String {
+        let trimmed = state.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return "friend" }
+        // Use the first token only — "Matthew Park" → "Matthew" — so the
+        // celebration headline reads like a real greeting, not a roll call.
+        return trimmed.split(separator: " ").first.map(String.init) ?? trimmed
+    }
+
+    var body: some View {
+        VStack(spacing: 22) {
+            // Big seal/checkmark in accent red, mirroring the demo-success state.
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 64))
+                .foregroundStyle(Brand.accent)
+
+            (Text("Hey, ").foregroundColor(Brand.ink)
+             + Text(firstName).italic().foregroundColor(Brand.accent)
+             + Text(".").foregroundColor(Brand.ink))
+                .font(.slapDisplay(size: 44))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("You're all set.")
+                .font(.slapTitle(size: 22))
+                .foregroundStyle(Brand.ink)
+
+            Text("Your license is live. Three modes are loaded and ready — slap your MacBook to switch between them anytime.")
+                .font(.slapBody(size: 13))
+                .foregroundStyle(Brand.mute)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .frame(maxWidth: 460)
+
+            Button(action: onFinish) {
+                Text("Take me to my home")
+            }
+            .buttonStyle(InkButtonStyle(fullWidth: true))
+            .keyboardShortcut(.return)
+            .frame(maxWidth: 280)
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: 520)
     }
 }
 
@@ -655,6 +783,9 @@ private struct LabeledField: View {
     let label: String
     @Binding var text: String
     let placeholder: String
+    /// Fired when the user presses Return inside the field. Lets parent
+    /// steps advance onboarding without forcing the user over to Continue.
+    var onSubmit: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -680,6 +811,7 @@ private struct LabeledField: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 15, design: .default))
                     .foregroundStyle(Brand.ink)
+                    .onSubmit(onSubmit)
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 12)
@@ -719,8 +851,9 @@ private struct StepDots: View {
 final class OnboardingState: ObservableObject {
 
     enum Step: Int, CaseIterable {
-        case welcome, signin, name, usage, permission,
-             demoOne, demoTwo, demoThree, tutorial, customize, paywall
+        case welcome, name, usage, permission,
+             demoOne, demoTwo, demoThree, tutorial, customize, paywall,
+             activated
         var index: Int { rawValue }
 
         /// For demo steps that actually wait on a live slap, how many slaps
@@ -755,17 +888,19 @@ final class OnboardingState: ObservableObject {
 
     @Published var step: Step = .welcome
 
-    // Identity (Phase 1: stub; Phase 2: real Supabase OAuth)
+    // Identity — name + email collected on NameStep. Email is the license
+    // recipient and the handle used for product update emails (Resend).
     @Published var name: String = ""
     @Published var email: String = ""
-    @Published var provider: AuthProvider? = nil
-    @Published var userId: String? = nil
-    @Published var signingIn: Bool = false
-    @Published var pendingProvider: AuthProvider? = nil
-    @Published var signInError: String? = nil
 
     // Multi-select usage
     @Published var usage: Set<String> = []
+
+    /// Free-text answer when the user picks the "other" card on the usage
+    /// step. Required (non-empty) before Continue can advance from `.usage`
+    /// when "other" is selected. Sent to Supabase alongside the structured
+    /// tags so we can read what real users want.
+    @Published var otherUsageDetail: String = ""
 
     @Published var permissionGranted: Bool = false
 
@@ -784,6 +919,15 @@ final class OnboardingState: ObservableObject {
     @Published var promoCode: String = ""
     @Published var promoStatus: PromoStatus = .none
 
+    /// Inline "I already have a license" entry on the paywall. Lets a buyer
+    /// who paid (and got the key by email) activate without going through
+    /// Stripe Checkout again — critical fallback when the slapshift:// deep
+    /// link from /success doesn't fire (browser blocked it, app wasn't
+    /// running, they paid on a different machine, etc.).
+    @Published var licenseInputKey: String = ""
+    @Published var licenseActivating: Bool = false
+    @Published var licenseActivationError: String? = nil
+
     // Callbacks wired by AppDelegate.
     var openInputMonitoringSettings: () -> Void = {}
     /// Called when the user taps "Buy now". The `promoCode` argument is the
@@ -791,16 +935,36 @@ final class OnboardingState: ObservableObject {
     /// forwards it to Stripe Checkout as a query parameter.
     var openCheckout: (String?) -> Void = { _ in }
     var openLicenseSheet: () -> Void = {}
+    /// Inline license activation. Reads `licenseInputKey`, calls
+    /// LicenseManager.tryActivate. On success the existing licenseManager
+    /// subscription advances the step to .activated automatically. On
+    /// failure, populates `licenseActivationError`.
+    var activateLicense: () -> Void = {}
 
-    private let authService: AuthService
+    /// Best-effort POST of the onboarding profile (name + email + usage
+    /// tags + optional "other" detail) to the Supabase-backed /api/profile
+    /// endpoint. Fired once when the user advances out of the `.usage` step
+    /// — that's the first point where we have name, email, AND the usage
+    /// answer, and it captures the user even if they bail before paying.
+    /// Wired by AppDelegate. Failures are logged, never surfaced to the
+    /// user; the onboarding flow continues regardless.
+    var submitProfile: () -> Void = {}
 
-    init(authService: AuthService) {
-        self.authService = authService
-    }
+    /// Tracks whether `submitProfile` has fired for this onboarding session.
+    /// Prevents re-POSTing every time the user clicks Back→Continue across
+    /// `.usage`. Reset only by relaunch (a new OnboardingState).
+    private var profileSubmitted: Bool = false
 
     // MARK: - Navigation
 
     func next() {
+        // Capture-on-leave-usage: first time we advance off the usage step,
+        // POST the collected profile so the user is in the mailing list even
+        // if they never finish onboarding.
+        if step == .usage && !profileSubmitted {
+            profileSubmitted = true
+            submitProfile()
+        }
         guard let nextStep = Step(rawValue: step.rawValue + 1) else { return }
         step = nextStep
     }
@@ -816,9 +980,14 @@ final class OnboardingState: ObservableObject {
     var canAdvance: Bool {
         switch step {
         case .welcome:     return true
-        case .signin:      return provider != nil
-        case .name:        return !name.trimmingCharacters(in: .whitespaces).isEmpty
-        case .usage:       return !usage.isEmpty
+        case .name:        return isNameValid && isEmailValid
+        case .usage:
+            guard !usage.isEmpty else { return false }
+            // If "Other" is selected, require a non-empty explanation.
+            if usage.contains("other") {
+                return !otherUsageDetail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+            return true
         case .permission:  return permissionGranted
         case .demoOne:     return demoOneResult == .success
         case .demoTwo:     return demoTwoResult == .success
@@ -826,7 +995,31 @@ final class OnboardingState: ObservableObject {
         case .customize:   return true
         case .tutorial:    return true
         case .paywall:     return true  // footer hidden; PaywallStep has its own CTAs
+        case .activated:   return true  // footer hidden; ActivatedStep has its own CTA
         }
+    }
+
+    // MARK: - Identity validation
+
+    var isNameValid: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// Cheap sanity check on email. Real validation lives at Stripe + the
+    /// /api/checkout route; this just blocks "Continue" on obviously bad
+    /// input (no @, no domain, whitespace, etc.) so we don't ship garbage
+    /// addresses to the mailing list. Server validates again before use.
+    var isEmailValid: Bool {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 5, trimmed.count <= 254 else { return false }
+        guard !trimmed.contains(" ") else { return false }
+        guard let at = trimmed.firstIndex(of: "@") else { return false }
+        let local = trimmed[..<at]
+        let domain = trimmed[trimmed.index(after: at)...]
+        guard !local.isEmpty, !domain.isEmpty else { return false }
+        guard domain.contains(".") else { return false }
+        guard !domain.hasPrefix("."), !domain.hasSuffix(".") else { return false }
+        return true
     }
 
     // MARK: - Promo code
@@ -895,35 +1088,5 @@ final class OnboardingState: ObservableObject {
         default: break
         }
         return result == .success
-    }
-
-    // MARK: - Sign-in flow
-
-    func signIn(with provider: AuthProvider) async {
-        guard !signingIn else { return }
-        signingIn = true
-        pendingProvider = provider
-        signInError = nil
-        do {
-            let identity = try await authService.signIn(with: provider)
-            self.provider = identity.provider
-            self.userId = identity.userId
-            // Pre-fill the name step from the provider response when the
-            // identity carries a real display name. Email is intentionally
-            // NOT prefilled — the stub returns a placeholder string ("you@
-            // example.com") which would land as opaque body text in the
-            // field and look like the user already typed it. The user types
-            // their real address on the next step instead.
-            if let displayName = identity.displayName, name.isEmpty {
-                name = displayName
-            }
-            signingIn = false
-            pendingProvider = nil
-            next()
-        } catch {
-            signingIn = false
-            pendingProvider = nil
-            signInError = error.localizedDescription
-        }
     }
 }

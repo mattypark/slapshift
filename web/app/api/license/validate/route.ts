@@ -50,13 +50,21 @@ export async function POST(req: Request) {
   const machineId = typeof body.machineId === "string" ? body.machineId : "";
 
   if (!looksLikeKey(key)) {
-    return NextResponse.json({ ok: false, reason: "not_found" });
+    // Distinguish format failures from DB misses so the buyer sees the
+    // right error. Old behavior returned "not_found" for both, which
+    // hid copy/paste typos behind a misleading "key doesn't exist".
+    console.warn("[validate] bad_format len=%d prefix=%s", key.length, key.slice(0, 6));
+    return NextResponse.json({ ok: false, reason: "bad_format" }, { status: 400 });
   }
   if (machineId.length === 0 || machineId.length > 128) {
     return NextResponse.json({ ok: false, reason: "bad_request" }, { status: 400 });
   }
 
   const keyHash = hashKey(key);
+  // Log first 8 hex chars only so we can correlate failures against the
+  // DB without ever putting the full hash in logs. Full hash is sensitive
+  // because it equals the stored credential.
+  const hashPrefix = keyHash.slice(0, 8);
 
   const { data: license, error } = await supabaseAdmin
     .from("licenses")
@@ -69,6 +77,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, reason: "server_error" }, { status: 500 });
   }
   if (!license) {
+    console.warn("[validate] not_found hashPrefix=%s — secret rotated or wrong DB?", hashPrefix);
     return NextResponse.json({ ok: false, reason: "not_found" });
   }
   if (license.status !== "active") {

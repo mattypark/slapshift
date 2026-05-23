@@ -13,10 +13,12 @@ final class SettingsWindow {
     private var window: NSWindow?
     private let modeStore: ModeStore
     private let prefs: AppPreferences
+    private let motionMonitor: MotionMonitor
 
-    init(modeStore: ModeStore, prefs: AppPreferences) {
+    init(modeStore: ModeStore, prefs: AppPreferences, motionMonitor: MotionMonitor) {
         self.modeStore = modeStore
         self.prefs = prefs
+        self.motionMonitor = motionMonitor
     }
 
     func show() {
@@ -30,6 +32,7 @@ final class SettingsWindow {
         let view = SettingsView()
             .environmentObject(modeStore)
             .environmentObject(prefs)
+            .environmentObject(motionMonitor)
 
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)

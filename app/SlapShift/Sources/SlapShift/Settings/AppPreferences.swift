@@ -27,17 +27,25 @@ final class AppPreferences: ObservableObject {
         }
     }
 
+    // Key suffix bumped to v2 on 2026-05-22 so existing users pick up the
+    // new forgiving defaults on next launch. The old keys tuned against a
+    // pre-hysteresis classifier weren't transferable anyway.
     private enum Keys {
-        static let threshold = "slap.threshold.g"
-        static let window = "slap.window.seconds"
+        static let threshold = "slap.threshold.g.v2"
+        static let window = "slap.window.seconds.v2"
         static let launchAtLogin = "launch.at.login"
     }
 
+    /// Defaults match SlapClassifier's hardcoded defaults so onboarding and
+    /// settings always agree out of the box. Tune both in lockstep.
+    static let defaultThresholdG: Double = 1.025
+    static let defaultWindowSeconds: Double = 0.85
+
     private init() {
         let storedThreshold = UserDefaults.standard.double(forKey: Keys.threshold)
-        self.slapThresholdG = storedThreshold > 0 ? storedThreshold : 1.06
+        self.slapThresholdG = storedThreshold > 0 ? storedThreshold : Self.defaultThresholdG
         let storedWindow = UserDefaults.standard.double(forKey: Keys.window)
-        self.slapWindowSeconds = storedWindow > 0 ? storedWindow : 0.40
+        self.slapWindowSeconds = storedWindow > 0 ? storedWindow : Self.defaultWindowSeconds
         self.launchAtLogin = UserDefaults.standard.bool(forKey: Keys.launchAtLogin)
     }
 }

@@ -37,11 +37,16 @@ final class OnboardingWindow {
         // .fullSizeContentView lets the cream background bleed under the
         // titlebar so the window feels like a single sheet of paper, the
         // same way the website feels like a single cream canvas.
-        win.styleMask = [.titled, .closable, .fullSizeContentView]
+        // .resizable + .miniaturizable enable the standard zoom (full-screen)
+        // and minimize traffic-light buttons so the user can dock the
+        // onboarding window to the bottom-right or blow it up to fullscreen.
+        win.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+        win.collectionBehavior.insert(.fullScreenPrimary)
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .hidden
-        win.backgroundColor = NSColor(red: 0.937, green: 0.914, blue: 0.827, alpha: 1)
+        win.backgroundColor = NSColor(red: 0.925, green: 0.898, blue: 0.820, alpha: 1)
         win.setContentSize(NSSize(width: 720, height: 640))
+        win.minSize = NSSize(width: 560, height: 520)
         win.center()
         win.isReleasedWhenClosed = false
         win.delegate = WindowDelegate.shared

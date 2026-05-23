@@ -29,6 +29,7 @@ final class MenuBarController {
 
     var onQuit: (() -> Void)?
     var onOpenSettings: (() -> Void)?
+    var onOpenHome: (() -> Void)?
     var onTestSlap: ((Int) -> Void)?
 
     private let modeStore: ModeStore
@@ -92,6 +93,10 @@ final class MenuBarController {
         }
         menu.addItem(.separator())
 
+        let home = NSMenuItem(title: "Show Home", action: #selector(openHome), keyEquivalent: "h")
+        home.target = self
+        menu.addItem(home)
+
         let settings = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
@@ -121,6 +126,10 @@ final class MenuBarController {
 
     @objc private func openSettings() {
         onOpenSettings?()
+    }
+
+    @objc private func openHome() {
+        onOpenHome?()
     }
 
     @objc private func testSlap(_ sender: NSMenuItem) {

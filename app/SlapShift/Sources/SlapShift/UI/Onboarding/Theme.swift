@@ -15,7 +15,7 @@ import SwiftUI
 
 enum Brand {
     // Surfaces — straight from the web :root vars.
-    static let cream         = Color(red: 0.937, green: 0.914, blue: 0.827) // #efe9d3
+    static let cream         = Color(red: 0.925, green: 0.898, blue: 0.820) // #ece5d1 — matches slapshiftlogo.png backing exactly
     static let creamDeeper   = Color(red: 0.910, green: 0.882, blue: 0.776) // #e8e1c6
     static let paper         = Color(red: 0.964, green: 0.945, blue: 0.871) // #f6f1de
     static let rule          = Color(red: 0.780, green: 0.760, blue: 0.659) // #c7c2a8
@@ -100,30 +100,6 @@ struct OutlineButtonStyle: ButtonStyle {
                             .fill(configuration.isPressed ? Brand.creamDeeper : Color.clear)
                     )
             )
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
-    }
-}
-
-/// SSO button (Continue with Google / Apple). White card with provider glyph + label.
-/// Same shape as the dark 10x screen, repainted for the cream brand.
-struct SSOButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 14, weight: .medium, design: .default))
-            .foregroundStyle(Brand.ink)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .padding(.horizontal, 18)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Brand.paper)
-                    .shadow(color: Color.black.opacity(configuration.isPressed ? 0.04 : 0.08), radius: 6, x: 0, y: 2)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Brand.rule.opacity(0.6), lineWidth: 1)
-            )
-            .scaleEffect(configuration.isPressed ? 0.99 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
@@ -218,12 +194,10 @@ struct BrandLogo: View {
                     .interpolation(.high)
                     .scaledToFit()
                     .frame(height: height)
-                    // Multiply lets the PNG's background (cream for slapshiftlogo,
-                    // white for Sslap) drop out onto the app's surface cream so the
-                    // wordmark reads as painted directly on the canvas instead of
-                    // pasted on a slightly off-cream tile. Red strokes survive.
-                    .blendMode(.multiply)
-                    .opacity(0.92)
+                    // No blend mode. Brand.cream is tuned to match the PNG's
+                    // backing color (#ece5d1) so the logo tile fuses with the
+                    // surface and the artwork renders untouched.
+                    .blendMode(loaded.useMultiply ? .multiply : .normal)
             } else {
                 SlapMark(size: height)
             }
@@ -247,80 +221,3 @@ struct BrandLogo: View {
     }
 }
 
-/// Google "G" mark. Loads Resources/googlelogo.png — Google's actual brand
-/// asset — so the "Sign in with Google" button looks like the real thing and
-/// not a SwiftUI approximation. Falls back to a hand-drawn SwiftUI G if the
-/// PNG is missing from the bundle, so a broken Resources copy phase doesn't
-/// leave the button with an empty space.
-struct GoogleLogo: View {
-    var size: CGFloat = 18
-
-    var body: some View {
-        if let url = Bundle.main.url(forResource: "googlelogo", withExtension: "png"),
-           let nsImage = NSImage(contentsOf: url) {
-            Image(nsImage: nsImage)
-                .resizable()
-                .interpolation(.high)
-                .scaledToFit()
-                .frame(width: size, height: size)
-        } else {
-            GoogleLogoFallback(size: size)
-        }
-    }
-}
-
-/// SwiftUI-drawn fallback for the Google "G" — used only if the bundled PNG
-/// is missing. Geometry: SwiftUI Circle trim positions 0 = 3 o'clock, 0.25 = 6,
-/// 0.5 = 9, 0.75 = 12. The horizontal blue stem extends from the inner edge
-/// of the ring on the right inward to the horizontal center.
-private struct GoogleLogoFallback: View {
-    var size: CGFloat = 18
-
-    private let blue   = Color(red: 0.259, green: 0.522, blue: 0.957) // #4285F4
-    private let red    = Color(red: 0.918, green: 0.263, blue: 0.208) // #EA4335
-    private let yellow = Color(red: 0.984, green: 0.737, blue: 0.016) // #FBBC04
-    private let green  = Color(red: 0.204, green: 0.659, blue: 0.325) // #34A853
-
-    private var ringDiameter: CGFloat { size * 0.92 }
-    private var strokeWidth: CGFloat { size * 0.22 }
-    private var outerRadius: CGFloat { ringDiameter / 2 }
-    private var innerRadius: CGFloat { outerRadius - strokeWidth }
-
-    var body: some View {
-        ZStack {
-            // Red top arc: from ~11 o'clock (0.66) sweeping clockwise through
-            // 12 and over to ~2 o'clock (0.92). Position 1.0 is 3 o'clock, so
-            // stopping at 0.92 leaves a clean gap above the stem entry point.
-            arc(from: 0.66, to: 0.92, color: red)
-
-            // Blue right arc: starts JUST below 3 o'clock (0.05) and sweeps
-            // down to ~5 o'clock (0.18). The gap from 0.92 → 1.0 → 0.05 is
-            // where the stem meets the ring on the right side.
-            arc(from: 0.05, to: 0.18, color: blue)
-
-            // Green bottom arc: from ~5 o'clock (0.18) through 6 to ~8 (0.42).
-            arc(from: 0.18, to: 0.42, color: green)
-
-            // Yellow left arc: from ~8 o'clock (0.42) up through 9 to ~11 (0.66),
-            // meeting the red arc.
-            arc(from: 0.42, to: 0.66, color: yellow)
-
-            // Blue horizontal stem. Sits on the vertical midline. Extends from
-            // the horizontal center (x = 0) out to the inner edge of the ring
-            // on the right (x = innerRadius). Width = innerRadius. Center
-            // offset is therefore innerRadius / 2 so the left edge lands at 0.
-            Rectangle()
-                .fill(blue)
-                .frame(width: innerRadius, height: strokeWidth)
-                .offset(x: innerRadius / 2, y: 0)
-        }
-        .frame(width: size, height: size)
-    }
-
-    private func arc(from start: CGFloat, to end: CGFloat, color: Color) -> some View {
-        Circle()
-            .trim(from: start, to: end)
-            .stroke(color, style: StrokeStyle(lineWidth: strokeWidth, lineCap: .butt))
-            .frame(width: ringDiameter, height: ringDiameter)
-    }
-}

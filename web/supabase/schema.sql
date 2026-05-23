@@ -86,3 +86,34 @@ create unique index if not exists email_signups_email_source_idx
   on public.email_signups (email, source);
 
 alter table public.email_signups enable row level security;
+
+-- ============================================================================
+-- onboarding_profiles — captured when the desktop app finishes the usage step
+--
+-- One row per email. Holds name + intent (selected usage tags + an optional
+-- free-text "other" answer) so we can:
+--   1. Send Resend product-update emails to people who started onboarding,
+--      whether or not they ended up paying.
+--   2. See what real users want — the "other" answers show which usage cards
+--      we should add next.
+--
+-- last_seen_at bumps on every upsert so we can tell repeat onboarders from
+-- one-and-done signups. Email is lowercased before insert.
+-- ============================================================================
+create table if not exists public.onboarding_profiles (
+  id            uuid primary key default gen_random_uuid(),
+  email         text not null unique,
+  name          text,
+  usage         text[] not null default '{}',  -- ['coding','writing',...]
+  other_detail  text,                          -- only set when usage @> '{other}'
+  created_at    timestamptz not null default now(),
+  last_seen_at  timestamptz not null default now()
+);
+
+create index if not exists onboarding_profiles_created_idx
+  on public.onboarding_profiles (created_at desc);
+create index if not exists onboarding_profiles_usage_gin_idx
+  on public.onboarding_profiles using gin (usage);
+
+alter table public.onboarding_profiles enable row level security;
+-- No policies = service_role only.

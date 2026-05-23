@@ -102,6 +102,7 @@ enum LicenseValidator {
     private static func map(reason: String) -> LicenseValidationFailure {
         switch reason {
         case "not_found":        return .notFound
+        case "bad_format":       return .badRequest
         case "refunded":         return .refunded
         case "machine_mismatch": return .machineMismatch
         case "rate_limited":     return .rateLimited
