@@ -45,9 +45,14 @@ export function generateKey(): string {
   return `SLAP-${groups.join("-")}`;
 }
 
-/** Normalize user-pasted input: strip whitespace + dashes, uppercase, swap common Crockford lookalikes. */
+/** Normalize user-pasted input: uppercase, strip anything that isn't [A-Z0-9],
+ * swap common Crockford lookalikes. We strip aggressively (not just dashes +
+ * whitespace) because Gmail/Outlook web clipboards routinely smuggle in
+ * zero-width spaces, non-breaking spaces, and en/em-dashes when users copy
+ * styled monospace text. Anything that survived `escapeHtml` should be safe
+ * to throw away here. */
 export function normalizeKey(raw: string): string {
-  let s = raw.trim().toUpperCase().replace(/[-\s]/g, "");
+  let s = raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
   // Crockford forgives O/I/L → 0/1/1
   s = s.replace(/O/g, "0").replace(/[IL]/g, "1").replace(/U/g, "V");
   return s;

@@ -53,7 +53,15 @@ export async function POST(req: Request) {
     // Distinguish format failures from DB misses so the buyer sees the
     // right error. Old behavior returned "not_found" for both, which
     // hid copy/paste typos behind a misleading "key doesn't exist".
-    console.warn("[validate] bad_format len=%d prefix=%s", key.length, key.slice(0, 6));
+    // Log codepoints (not the key itself) so we can see if a hidden
+    // unicode char (ZWSP, NBSP, em-dash) snuck in from a Gmail copy.
+    const codepoints = Array.from(key).map((c) => c.charCodeAt(0).toString(16)).join(",");
+    console.warn(
+      "[validate] bad_format len=%d prefix=%s codepoints=%s",
+      key.length,
+      key.slice(0, 6),
+      codepoints,
+    );
     return NextResponse.json({ ok: false, reason: "bad_format" }, { status: 400 });
   }
   if (machineId.length === 0 || machineId.length > 128) {

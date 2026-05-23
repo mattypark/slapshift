@@ -117,7 +117,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   // Email the customer.
-  const deepLink = `slapshift://license?key=${encodeURIComponent(key)}`;
+  // Use an HTTPS redirect page in the email instead of a raw `slapshift://`
+  // URL: Gmail (and most webmail clients) silently strip or de-link custom
+  // protocol hrefs as a security measure, so the button would do nothing.
+  // The /activate page fires the deep link client-side once we're back in
+  // browser context, which works because it's a user-gesture navigation.
+  const siteUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
+  const deepLink = `${siteUrl}/activate?key=${encodeURIComponent(key)}`;
   try {
     await resend.emails.send({
       from: env.RESEND_FROM_EMAIL,
