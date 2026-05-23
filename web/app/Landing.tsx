@@ -18,17 +18,18 @@ export default function Landing() {
       <section className="relative h-screen overflow-hidden">
         <CafeBackground />
 
-        {/* Brand mark — anchored left, vertically aligned with the H1
-            headline (~38% from top) instead of floating in dead space at
-            the very top. Sized down so it doesn't fight the headline for
-            attention. Stays well clear of the seated PixelCharacter. */}
-        <div className="absolute top-[38%] left-0 -translate-y-1/2 z-50 px-[40px]">
+        {/* Brand mark — anchored top-left where a brand mark belongs.
+            Sized up from the previous h-20 so it reads from across the
+            room. (Previous md:h-55 was an invalid Tailwind class — it
+            silently fell back to h-20, which is why it always looked
+            small even on big screens.) */}
+        <div className="absolute top-0 left-0 z-50 px-[22px] py-[14px]">
           <a href="#" className="inline-flex items-center" aria-label="SlapShift">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/realslapshift.png"
               alt="SlapShift"
-              className="h-12 md:h-16 w-auto pixelated"
+              className="h-28 md:h-40 w-auto pixelated"
             />
           </a>
         </div>
@@ -40,7 +41,7 @@ export default function Landing() {
             over the character's torso/head. Fixed-pixel padding because the
             character itself is a fixed-pixel asset (240x170 scaled 1.85x). */}
         <div className="relative z-20 flex h-full items-center justify-center px-8 pb-[380px]">
-          <div className="text-center max-w-4xl mt-[10px]">
+          <div className="text-center max-w-4xl mt-[120px]">
             <h1
               className="text-6xl md:text-8xl font-serif leading-[1.02] tracking-tight text-[var(--ink)]"
               style={{ fontFamily: "var(--font-serif)" }}
