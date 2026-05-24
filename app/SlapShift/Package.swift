@@ -12,7 +12,13 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "SlapShift",
-            path: "Sources/SlapShift"
+            path: "Sources/SlapShift",
+            resources: [
+                // Brand logos for the onboarding source picker. Rasterized
+                // 112×112 PNGs from simpleicons (CC0). Bundled so onboarding
+                // works offline.
+                .process("Resources")
+            ]
         ),
         .testTarget(
             name: "SlapShiftTests",

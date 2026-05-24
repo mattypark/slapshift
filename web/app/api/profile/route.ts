@@ -32,6 +32,26 @@ const ALLOWED_USAGE = new Set([
   "research",
   "other",
 ]);
+// Mirrors SourceStep.options in the Mac app. Keep the two in sync — a
+// tampered client can send arbitrary strings, so the server is the source
+// of truth for what we accept into Supabase.
+const ALLOWED_SOURCE = new Set([
+  "google",
+  "reddit",
+  "twitter",
+  "youtube",
+  "tiktok",
+  "instagram",
+  "producthunt",
+  "friend",
+  "newsletter",
+  "other",
+]);
+// Sanity bounds on the calibration peak. Anything outside this range is
+// either a sensor glitch or a tampered payload — clamp/reject rather than
+// pollute Supabase with absurd values used to skew future threshold tuning.
+const CALIBRATION_MIN_G = 0;
+const CALIBRATION_MAX_G = 20;
 
 // Same shape the Mac app validates against — keep them in sync so we don't
 // reject legitimate users for trivial differences. RFC 5322 is overkill;
@@ -68,6 +88,39 @@ export async function POST(req: Request) {
   const otherDetail =
     typeof raw.otherDetail === "string" ? raw.otherDetail.trim().slice(0, MAX_OTHER) : "";
 
+  // Optional fields — only persisted if the client included them in the
+  // payload. The Mac app POSTs after .usage, .source, .privacy, and
+  // .slapTest, each adding one new field. Skipping the column on the
+  // upsert when the field is absent prevents an earlier POST from blowing
+  // away a value collected on a later step.
+  // Source step is multi-select. Accept `referralSources` as an array of
+  // allow-listed strings and persist as a comma-joined value in the existing
+  // `referral_source` text column (schema-stable). For backward compat with
+  // any older client that POSTs the singular string, fold it into the same
+  // pipeline before validation.
+  const rawSources: unknown[] = Array.isArray(raw.referralSources)
+    ? raw.referralSources
+    : typeof raw.referralSource === "string"
+      ? [raw.referralSource]
+      : [];
+  const referralSourcesList = Array.from(
+    new Set(
+      rawSources.filter(
+        (s): s is string => typeof s === "string" && ALLOWED_SOURCE.has(s),
+      ),
+    ),
+  );
+  const referralSource =
+    referralSourcesList.length > 0 ? referralSourcesList.join(",") : undefined;
+  const telemetryOptIn = typeof raw.telemetryOptIn === "boolean" ? raw.telemetryOptIn : undefined;
+  const calibrationPeakG =
+    typeof raw.calibrationPeakG === "number" &&
+    Number.isFinite(raw.calibrationPeakG) &&
+    raw.calibrationPeakG >= CALIBRATION_MIN_G &&
+    raw.calibrationPeakG <= CALIBRATION_MAX_G
+      ? raw.calibrationPeakG
+      : undefined;
+
   if (!isValidEmail(emailRaw)) {
     return NextResponse.json({ error: "invalid_email" }, { status: 400 });
   }
@@ -78,16 +131,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "other_detail_required" }, { status: 400 });
   }
 
+  const upsertRow: Record<string, unknown> = {
+    email: emailRaw,
+    name: name || null,
+    usage,
+    other_detail: otherDetail || null,
+    // last_seen_at bumps on every upsert so we can tell "they re-ran
+    // onboarding" from "they signed up once and disappeared."
+    last_seen_at: new Date().toISOString(),
+  };
+  if (referralSource !== undefined) upsertRow.referral_source = referralSource;
+  if (telemetryOptIn !== undefined) upsertRow.telemetry_opt_in = telemetryOptIn;
+  if (calibrationPeakG !== undefined) upsertRow.calibration_peak_g = calibrationPeakG;
+
   const { error } = await supabaseAdmin.from("onboarding_profiles").upsert(
-    {
-      email: emailRaw,
-      name: name || null,
-      usage,
-      other_detail: otherDetail || null,
-      // last_seen_at bumps on every upsert so we can tell "they re-ran
-      // onboarding" from "they signed up once and disappeared."
-      last_seen_at: new Date().toISOString(),
-    },
+    upsertRow,
     { onConflict: "email" },
   );
 

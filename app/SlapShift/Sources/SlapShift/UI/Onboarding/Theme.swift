@@ -11,6 +11,7 @@
 // product across web → app without the resource-handling cost. If we ever
 // want pixel-perfect parity, this is the seam to swap in custom .ttf loads.
 
+import AppKit
 import SwiftUI
 
 enum Brand {
@@ -110,18 +111,46 @@ struct OutlineButtonStyle: ButtonStyle {
 /// multi-select grid. Selected = accent border + faint paper fill.
 struct SelectableCard: View {
     let icon: String
+    /// Optional brand PNG bundled under Resources/Logos. When set, renders the
+    /// actual brand mark (Reddit alien, YouTube play, etc.) instead of the SF
+    /// Symbol `icon`. Falls back to `icon` if the bundle lookup misses, so a
+    /// missing asset never blanks the card.
+    var brandAsset: String? = nil
     let title: String
     let subtitle: String
     let isSelected: Bool
     let action: () -> Void
 
+    private var brandImage: NSImage? {
+        guard let name = brandAsset else { return nil }
+        // Xcode copies the Logos/ folder reference into Contents/Resources/Logos/,
+        // so lookups go through Bundle.main with subdirectory: "Logos". Falls back
+        // to a flat lookup in case someone later moves the PNGs to Resources root.
+        if let url = Bundle.main.url(forResource: name, withExtension: "png", subdirectory: "Logos") {
+            return NSImage(contentsOf: url)
+        }
+        if let url = Bundle.main.url(forResource: name, withExtension: "png") {
+            return NSImage(contentsOf: url)
+        }
+        return nil
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .regular))
-                    .foregroundStyle(isSelected ? Brand.accent : Brand.mute)
-                    .frame(width: 24, alignment: .leading)
+                if let nsImg = brandImage {
+                    Image(nsImage: nsImg)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                        .opacity(isSelected ? 1.0 : 0.85)
+                        .frame(width: 24, alignment: .leading)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundStyle(isSelected ? Brand.accent : Brand.mute)
+                        .frame(width: 24, alignment: .leading)
+                }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
                         .font(.system(size: 14, weight: .semibold, design: .serif))

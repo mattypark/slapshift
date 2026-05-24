@@ -45,9 +45,17 @@ final class OnboardingWindow {
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .hidden
         win.backgroundColor = NSColor(red: 0.925, green: 0.898, blue: 0.820, alpha: 1)
-        win.setContentSize(NSSize(width: 720, height: 640))
         win.minSize = NSSize(width: 560, height: 520)
-        win.center()
+        // Fill the screen's visible frame (excluding menu bar + Dock) instead
+        // of native fullscreen — Cmd+Tab, Mission Control, and multi-window
+        // muscle memory all keep working. Same visual effect as Willow's
+        // onboarding: feels like a takeover without actually taking over.
+        if let screen = NSScreen.main {
+            win.setFrame(screen.visibleFrame, display: true)
+        } else {
+            win.setContentSize(NSSize(width: 1280, height: 800))
+            win.center()
+        }
         win.isReleasedWhenClosed = false
         win.delegate = WindowDelegate.shared
 

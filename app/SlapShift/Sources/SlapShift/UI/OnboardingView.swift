@@ -116,7 +116,9 @@ struct OnboardingView: View {
         case .welcome:     WelcomeStep()
         case .name:        NameStep(state: state)
         case .usage:       UsageStep(state: state)
+        case .source:      SourceStep(state: state)
         case .permission:  PermissionStep(state: state)
+        case .slapTest:    SlapTestStep(state: state)
         case .demoOne:     DemoStep(state: state, expectedCount: 1,
                                     title: "Slap your MacBook once",
                                     subtitle: "Give it one firm slap on the palm rest. We'll confirm we felt it.")
@@ -412,6 +414,168 @@ private struct DemoStep: View {
     }
 }
 
+// MARK: - Source step (referral attribution)
+//
+// Multi-select. Choices write to OnboardingState.referralSources, which is
+// upserted into Supabase on .next() as a comma-joined string in the
+// existing referral_source column. Allow-list is mirrored server-side in
+// /api/profile so a tampered client can't write arbitrary text.
+private struct SourceStep: View {
+    @ObservedObject var state: OnboardingState
+
+    /// id: stable key sent to Supabase (allow-list mirrored in /api/profile).
+    /// icon: SF Symbol fallback if no brandAsset.
+    /// brandAsset: PNG filename (no extension) under Resources/Logos. nil = SF Symbol.
+    /// title: card label.
+    fileprivate static let options: [(id: String, icon: String, brandAsset: String?, title: String)] = [
+        ("google",       "magnifyingglass",  nil,            "Google search"),
+        ("reddit",       "bubble.left",      "reddit",       "Reddit"),
+        ("twitter",      "bird",             "x",            "Twitter / X"),
+        ("youtube",      "play.rectangle",   "youtube",      "YouTube"),
+        ("tiktok",       "music.note",       "tiktok",       "TikTok"),
+        ("instagram",    "camera.fill",      "instagram",    "Instagram"),
+        ("producthunt",  "flame.fill",       "producthunt",  "Product Hunt"),
+        ("friend",       "person.2.fill",    nil,            "A friend"),
+        ("newsletter",   "envelope.fill",    nil,            "Newsletter"),
+        ("other",        "sparkles",         nil,            "Somewhere else"),
+    ]
+
+    var body: some View {
+        VStack(spacing: 18) {
+            VStack(spacing: 6) {
+                Text("How did you hear about SlapShift?")
+                    .font(.slapTitle(size: 24))
+                    .foregroundStyle(Brand.ink)
+                Text("Pick all that apply. Helps us figure out which channels actually work.")
+                    .font(.slapBody(size: 12))
+                    .foregroundStyle(Brand.mute)
+            }
+
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10),
+                                GridItem(.flexible(), spacing: 10)],
+                      spacing: 10) {
+                ForEach(Self.options, id: \.id) { opt in
+                    SelectableCard(
+                        icon: opt.icon,
+                        brandAsset: opt.brandAsset,
+                        title: opt.title,
+                        subtitle: "",
+                        isSelected: state.referralSources.contains(opt.id),
+                        action: {
+                            if state.referralSources.contains(opt.id) {
+                                state.referralSources.remove(opt.id)
+                            } else {
+                                state.referralSources.insert(opt.id)
+                            }
+                        }
+                    )
+                }
+            }
+            .frame(maxWidth: 560)
+        }
+    }
+}
+
+// MARK: - Slap test step
+//
+// Just a live meter — no gate, no target. Mirrors the meter in Settings so
+// the user sees exactly how their laptop feels their slaps. They can leave
+// Continue active immediately; the bar is for fun + confidence. The peak
+// we observe still goes to Supabase (calibrationPeakG) so we can tune the
+// global threshold from real-world hardware variance.
+private struct SlapTestStep: View {
+    @ObservedObject var state: OnboardingState
+
+    var body: some View {
+        if let monitor = state.motionMonitor {
+            SlapTestMeter(state: state, monitor: monitor)
+        } else {
+            // Should never hit in production — AppDelegate always injects.
+            VStack(spacing: 12) {
+                Text("Slap meter unavailable")
+                    .font(.slapTitle(size: 20))
+                    .foregroundStyle(Brand.ink)
+                Text("We couldn't reach the motion sensor. You can continue and try the live demos next.")
+                    .font(.slapBody(size: 12))
+                    .foregroundStyle(Brand.mute)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 420)
+            }
+        }
+    }
+}
+
+private struct SlapTestMeter: View {
+    @ObservedObject var state: OnboardingState
+    @ObservedObject var monitor: MotionMonitor
+
+    /// Range the meter visualizes. 1g is resting; 6g comfortably covers a
+    /// firm slap on Apple Silicon laptops.
+    private let minG: Double = 1.0
+    private let maxG: Double = 6.0
+
+    private var fillFraction: Double {
+        let clamped = min(max(monitor.recentPeakG, minG), maxG)
+        return (clamped - minG) / (maxG - minG)
+    }
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Image(systemName: "wave.3.right")
+                .font(.system(size: 44))
+                .foregroundStyle(Brand.accent)
+
+            Text("Your slap meter")
+                .font(.slapTitle(size: 24))
+                .foregroundStyle(Brand.ink)
+
+            Text("Slap the palm rest. We'll show how hard the laptop felt it. You can tune sensitivity later in Settings.")
+                .font(.slapBody(size: 13))
+                .foregroundStyle(Brand.mute)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .frame(maxWidth: 460)
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Brand.paper)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(Brand.rule.opacity(0.6), lineWidth: 1)
+                        )
+
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Brand.accent)
+                        .frame(width: max(0, geo.size.width * fillFraction))
+                        .animation(.easeOut(duration: 0.12), value: monitor.recentPeakG)
+                }
+            }
+            .frame(height: 22)
+            .frame(maxWidth: 460)
+
+            HStack {
+                Text("\(String(format: "%.1f", monitor.recentPeakG))g")
+                    .font(.slapMeta(size: 11))
+                    .foregroundStyle(Brand.mute)
+                Spacer()
+                Text("Peak: \(String(format: "%.1f", state.calibrationPeakG))g")
+                    .font(.slapMeta(size: 11))
+                    .foregroundStyle(Brand.mute)
+            }
+            .frame(maxWidth: 460)
+        }
+        .onChange(of: monitor.recentPeakG) { newValue in
+            // Latch the highest peak we've seen so the "Peak" readout
+            // stays useful even after the live bar falls back to resting g.
+            // Still upserted to Supabase for threshold tuning.
+            if newValue > state.calibrationPeakG {
+                state.calibrationPeakG = newValue
+            }
+        }
+    }
+}
+
 private struct CustomizeStep: View {
     var body: some View {
         VStack(spacing: 18) {
@@ -480,10 +644,15 @@ private struct PaywallStep: View {
                     .foregroundStyle(Brand.mute)
             }
 
-            Text("Less than a sad desk lunch.")
-                .font(.slapTitle(size: 18))
-                .italic()
-                .foregroundStyle(Brand.accent)
+            VStack(spacing: 4) {
+                Text("Less than a sad desk lunch.")
+                    .font(.slapTitle(size: 18))
+                    .italic()
+                    .foregroundStyle(Brand.accent)
+                Text("(you could also make it all back, possibly even more 👀)")
+                    .font(.slapBody(size: 12))
+                    .foregroundStyle(Brand.mute)
+            }
 
             // Pitch bullets — folded in from the old standalone LicenseSheet
             // so the buyer sees value + price + actions in one window instead
@@ -774,7 +943,7 @@ private struct StepDots: View {
 final class OnboardingState: ObservableObject {
 
     enum Step: Int, CaseIterable {
-        case welcome, name, usage, permission,
+        case welcome, name, usage, source, permission, slapTest,
              demoOne, demoTwo, demoThree, customize, paywall,
              activated
         var index: Int { rawValue }
@@ -825,6 +994,17 @@ final class OnboardingState: ObservableObject {
     /// tags so we can read what real users want.
     @Published var otherUsageDetail: String = ""
 
+    /// Multi-select referral attribution from the source step. Empty until
+    /// the user picks at least one card. Allow-list enforced by /api/profile.
+    /// Stored as a Set so toggling on/off is O(1) and the order doesn't
+    /// matter when we serialize for the upsert.
+    @Published var referralSources: Set<String> = []
+
+    /// Peak g recorded during the slap-test step. Updated live by SlapTestMeter
+    /// while the user is on the step; upserted into Supabase so we can later
+    /// tune the global slap threshold from real-world hardware variance.
+    @Published var calibrationPeakG: Double = 0
+
     @Published var permissionGranted: Bool = false
 
     /// Per-demo-step outcome, keyed by expected slap count.
@@ -847,6 +1027,11 @@ final class OnboardingState: ObservableObject {
     @Published var licenseInputKey: String = ""
     @Published var licenseActivating: Bool = false
     @Published var licenseActivationError: String? = nil
+
+    /// Live accelerometer monitor. Injected by AppDelegate so SlapTestStep
+    /// can observe `recentPeakG` directly. Optional because OnboardingState
+    /// can be constructed without one in previews/tests.
+    weak var motionMonitor: MotionMonitor?
 
     // Callbacks wired by AppDelegate.
     var openInputMonitoringSettings: () -> Void = {}
@@ -880,10 +1065,21 @@ final class OnboardingState: ObservableObject {
     func next() {
         // Capture-on-leave-usage: first time we advance off the usage step,
         // POST the collected profile so the user is in the mailing list even
-        // if they never finish onboarding.
-        if step == .usage && !profileSubmitted {
-            profileSubmitted = true
+        // if they never finish onboarding. The same row is upserted with
+        // richer data after source, privacy, and slapTest — each of those
+        // steps adds a new column (referral_source, telemetry_opt_in,
+        // calibration_peak_g) that's worth persisting on its own so a
+        // mid-flow bail still saves what we collected.
+        switch step {
+        case .usage:
+            if !profileSubmitted {
+                profileSubmitted = true
+            }
             submitProfile()
+        case .source, .slapTest:
+            submitProfile()
+        default:
+            break
         }
         guard let nextStep = Step(rawValue: step.rawValue + 1) else { return }
         step = nextStep
@@ -908,7 +1104,9 @@ final class OnboardingState: ObservableObject {
                 return !otherUsageDetail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             }
             return true
+        case .source:      return !referralSources.isEmpty
         case .permission:  return permissionGranted
+        case .slapTest:    return true
         case .demoOne:     return demoOneResult == .success
         case .demoTwo:     return demoTwoResult == .success
         case .demoThree:   return demoThreeResult == .success

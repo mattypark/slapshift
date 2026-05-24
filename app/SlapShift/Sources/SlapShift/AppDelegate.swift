@@ -24,7 +24,6 @@ let motionMonitor = MotionMonitor()
     private var homeWindow: HomeWindow?
     private var onboardingWindow: OnboardingWindow?
     private var onboardingState: OnboardingState?
-    private var licenseSheet: LicenseSheet?
     private var permissionPollTimer: Timer?
     private var motionRunning: Bool = false
     private var menuBarInstalled: Bool = false
@@ -151,9 +150,25 @@ let motionMonitor = MotionMonitor()
         } else {
             // Returning user — they've onboarded before, so reading the
             // Keychain license cache is expected and the prompt (if any
-            // appears) makes sense in context.
+            // appears) makes sense in context. Once bootstrap completes, if
+            // the cached license is still valid, surface the home window so
+            // a Spotlight / Raycast / Finder launch produces something
+            // visible. Without this the cold launch is silent (LSUIElement=
+            // accessory means no Dock icon and no auto-window), and users
+            // think the app didn't start. showHome() flips activation policy
+            // to .regular so the Dock icon appears for the lifetime of the
+            // window.
             Task { @MainActor in
                 await licenseManager.bootstrap()
+                if self.licenseManager.state.isLicensed {
+                    self.showHome()
+                } else {
+                    // Cached license missing / expired / revoked — drop the
+                    // user back into onboarding so they can re-paste their
+                    // key on the paywall (machine-id binding re-activates
+                    // instantly on the same Mac).
+                    self.presentOnboarding()
+                }
             }
         }
     }
@@ -276,28 +291,21 @@ let motionMonitor = MotionMonitor()
         let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
         let key = comps?.queryItems?.first(where: { $0.name == "key" })?.value ?? ""
 
-        // If onboarding is up, route the key into the inline paywall field and
-        // fire activation there. Popping a separate LicenseSheet alongside the
-        // onboarding paywall was the source of the "two windows" UX bug — the
-        // buyer would see the same pitch + Activate button in two places.
-        if let state = onboardingState {
-            if !key.isEmpty {
-                state.licenseInputKey = key
-                state.activateLicense()
-            }
-            // show() reuses the existing window if present and re-fronts it.
-            onboardingWindow?.show()
+        // The deep link only matters during onboarding — the paywall step has
+        // the inline license field that consumes the key. If onboarding isn't
+        // open, the user is either already licensed (URL is a no-op) or in a
+        // weird state we don't need to recover from with a popup. The old
+        // standalone LicenseSheet was deleted to kill the "two windows" UX bug.
+        if onboardingState == nil {
+            print("slapshift://license fired without active onboarding — ignoring")
+            NSApp.activate(ignoringOtherApps: true)
             return
         }
-
-        if key.isEmpty {
-            print("slapshift://license missing ?key= param")
-            // No onboarding window — fall back to the standalone sheet so the
-            // user can paste manually.
-            presentLicenseSheet(prefilling: nil)
-            return
+        if let state = onboardingState, !key.isEmpty {
+            state.licenseInputKey = key
+            state.activateLicense()
         }
-        presentLicenseSheet(prefilling: key)
+        onboardingWindow?.show()
     }
 
     // MARK: - Onboarding
@@ -308,6 +316,11 @@ let motionMonitor = MotionMonitor()
     private func presentOnboarding() {
         let state = OnboardingState()
 
+        // Inject the live accelerometer monitor so the slap-test step can
+        // observe recentPeakG directly. Weak reference on the state side
+        // keeps the monitor's lifecycle owned by AppDelegate.
+        state.motionMonitor = motionMonitor
+
         // Permission step — open the pane, then poll motion.start() until it succeeds.
         state.openInputMonitoringSettings = { [weak self] in
             self?.openInputMonitoringPane()
@@ -316,33 +329,24 @@ let motionMonitor = MotionMonitor()
         // Reflect current permission state immediately — motion may already be running.
         state.permissionGranted = motionRunning
 
-        // Paywall step — "Buy now" routes to Stripe Checkout in the user's browser.
-        // We don't open an in-app webview; Stripe's hosted checkout is the trusted
-        // payment surface and the redirect back to slapshift://license activates
-        // the key automatically once the webhook completes. A validated promo
-        // code (if any) is forwarded as ?promo=… so Stripe's hosted page can
-        // apply the matching Promotion Code without the user re-entering it.
+        // Paywall step — "Buy now" routes to Stripe Checkout in the user's
+        // browser. Stripe's hosted page is the trusted payment surface, and
+        // the redirect back to slapshift://license activates the key once
+        // the webhook completes. Email + optional validated promo code
+        // (from PaywallStep's Apply flow) are forwarded as query params;
+        // /api/checkout flips `allow_promotion_codes` so Stripe shows the
+        // promo field on its hosted page where the buyer redeems it.
         state.openCheckout = { [weak state] promoCode in
             let email = state?.email.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let promo = promoCode?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             var comps = URLComponents(string: "https://slapshift.app/api/checkout")!
             var items: [URLQueryItem] = []
-            if !email.isEmpty {
-                items.append(URLQueryItem(name: "email", value: email))
-            }
-            if let code = promoCode, !code.isEmpty {
-                items.append(URLQueryItem(name: "promo", value: code))
-            }
-            if !items.isEmpty {
-                comps.queryItems = items
-            }
+            if !email.isEmpty { items.append(URLQueryItem(name: "email", value: email)) }
+            if !promo.isEmpty { items.append(URLQueryItem(name: "promo", value: promo)) }
+            if !items.isEmpty { comps.queryItems = items }
             if let url = comps.url {
                 NSWorkspace.shared.open(url)
             }
-        }
-
-        // Paywall "I already have a license" — open the existing manual-entry sheet.
-        state.openLicenseSheet = { [weak self] in
-            self?.presentLicenseSheet(prefilling: nil)
         }
 
         // Inline paywall activation — buyer pasted a key into the field on
@@ -378,7 +382,9 @@ let motionMonitor = MotionMonitor()
                 name: state.name,
                 email: state.email,
                 usage: Array(state.usage),
-                otherDetail: state.otherUsageDetail
+                otherDetail: state.otherUsageDetail,
+                referralSources: state.referralSources.isEmpty ? nil : Array(state.referralSources),
+                calibrationPeakG: state.calibrationPeakG > 0 ? state.calibrationPeakG : nil
             )
         }
 
@@ -531,21 +537,36 @@ let motionMonitor = MotionMonitor()
 
     /// POST the onboarding profile to slapshift.app/api/profile, which
     /// upserts into the Supabase `onboarding_profiles` table. Fired from
-    /// `OnboardingState.submitProfile` when the user leaves the usage step.
+    /// `OnboardingState.submitProfile` when the user leaves the usage step
+    /// (and again after source/slapTest each add new columns).
     /// Best-effort: HTTP failures are logged and swallowed — onboarding
     /// must never block on a server round-trip.
-    static func postOnboardingProfile(name: String, email: String, usage: [String], otherDetail: String) {
+    ///
+    /// `referralSources` / `calibrationPeakG` are nil on the first POST
+    /// (before those steps have been answered) so we don't blow away later
+    /// upserts with empty values — the server's upsert only writes fields
+    /// that are present in the payload.
+    static func postOnboardingProfile(
+        name: String,
+        email: String,
+        usage: [String],
+        otherDetail: String,
+        referralSources: [String]? = nil,
+        calibrationPeakG: Double? = nil
+    ) {
         let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedEmail.isEmpty else { return }
         guard let url = URL(string: "https://slapshift.app/api/profile") else { return }
 
         let trimmedOther = otherDetail.trimmingCharacters(in: .whitespacesAndNewlines)
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "name": name.trimmingCharacters(in: .whitespacesAndNewlines),
             "email": trimmedEmail,
             "usage": usage,
             "otherDetail": trimmedOther,
         ]
+        if let referralSources { payload["referralSources"] = referralSources }
+        if let calibrationPeakG { payload["calibrationPeakG"] = calibrationPeakG }
         guard let body = try? JSONSerialization.data(withJSONObject: payload) else { return }
 
         var req = URLRequest(url: url)
@@ -648,25 +669,6 @@ let motionMonitor = MotionMonitor()
         executor.execute(mode)
         let actionCount = mode.appsToOpen.count + mode.appsToQuit.count + mode.urlsToOpen.count
         stats.recordSlap(actionCount: actionCount)
-    }
-
-    // MARK: - License sheet
-
-    /// Show the paywall / key-entry sheet. If `prefilling` is non-nil, the sheet
-    /// auto-attempts activation on appear (used by the slapshift://license URL flow).
-    private func presentLicenseSheet(prefilling key: String?) {
-        // Reuse an existing window if it's already up.
-        if let existing = licenseSheet {
-            existing.show()
-            return
-        }
-        let sheet = LicenseSheet(
-            manager: licenseManager,
-            initialKey: key,
-            onClose: { [weak self] in self?.licenseSheet = nil }
-        )
-        licenseSheet = sheet
-        sheet.show()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
