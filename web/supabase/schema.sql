@@ -23,7 +23,8 @@ create table if not exists public.licenses (
   status              text not null default 'active' check (status in ('active','refunded','revoked')),
   created_at          timestamptz not null default now(),
   bound_at            timestamptz,                 -- when machine_id was first set
-  last_validated_at   timestamptz
+  last_validated_at   timestamptz,
+  revealed_at         timestamptz                  -- /success showed plaintext key; reveal-once guard
 );
 
 create index if not exists licenses_email_idx        on public.licenses (email);

@@ -1,4 +1,4 @@
-// /activate?key=SLAP-XXXX-...
+// /activate
 //
 // Email button target. Reached by buyers who click "Activate SlapShift" in
 // the receipt email. We can't put a `slapshift://` href directly in the
@@ -6,10 +6,17 @@
 // here (HTTPS, allowed) and this page immediately fires the deep link via
 // the same client-gesture trick the /success page uses.
 //
-// We also show the key + a manual paste fallback so the buyer is never
-// stranded if their browser blocks the protocol handoff.
+// SECURITY: license key arrives in the URL fragment (#key=SLAP-...), NOT the
+// query string. Fragments stay in the browser and never hit Vercel function
+// logs, CDN access logs, or Referer headers. Reading the fragment requires
+// a client component (ActivateClient) because fragments aren't visible to
+// server-side rendering.
+//
+// Backward compat: older emails with `?key=...` still work — we forward the
+// searchParams value into the client component as a fallback. New emails
+// always use the fragment form.
 
-import { AutoActivate } from "@/app/success/AutoActivate";
+import { ActivateClient } from "./ActivateClient";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +25,7 @@ export default async function ActivatePage({
 }: {
   searchParams: Promise<{ key?: string }>;
 }) {
-  const { key = "" } = await searchParams;
-  const deepLink = key ? `slapshift://license?key=${encodeURIComponent(key)}` : "";
+  const { key: legacyKey = "" } = await searchParams;
 
   return (
     <main
@@ -35,7 +41,6 @@ export default async function ActivatePage({
           "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif",
       }}
     >
-      {deepLink ? <AutoActivate deepLink={deepLink} /> : null}
       <div
         style={{
           maxWidth: 480,
@@ -62,68 +67,7 @@ export default async function ActivatePage({
           If macOS asks &ldquo;Open SlapShift?&rdquo;, click <strong>Open</strong>. If
           nothing happens in a few seconds, click the button below.
         </p>
-
-        {key ? (
-          <>
-            <a
-              href={deepLink}
-              style={{
-                display: "inline-block",
-                marginTop: 20,
-                background: "#1a1a1a",
-                color: "#f4ecdc",
-                padding: "14px 28px",
-                fontFamily: "ui-monospace,'SFMono-Regular',Menlo,monospace",
-                fontSize: 12,
-                textTransform: "uppercase",
-                letterSpacing: "0.25em",
-                textDecoration: "none",
-                borderRadius: 4,
-              }}
-            >
-              Activate SlapShift &rarr;
-            </a>
-
-            <div
-              style={{
-                marginTop: 28,
-                padding: "16px 20px",
-                background: "#f4ecdc",
-                border: "1px dashed rgba(26,26,26,0.35)",
-                borderRadius: 6,
-                textAlign: "left",
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "ui-monospace,'SFMono-Regular',Menlo,monospace",
-                  fontSize: 10,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.3em",
-                  color: "#6b6b6b",
-                  marginBottom: 8,
-                }}
-              >
-                Or paste this key into SlapShift
-              </div>
-              <div
-                style={{
-                  fontFamily: "ui-monospace,'SFMono-Regular',Menlo,monospace",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  userSelect: "all",
-                  wordBreak: "break-all",
-                }}
-              >
-                {key}
-              </div>
-            </div>
-          </>
-        ) : (
-          <p style={{ marginTop: 20, fontSize: 13, color: "#a33" }}>
-            Missing license key. Check your receipt email for the activation link.
-          </p>
-        )}
+        <ActivateClient fallbackKey={legacyKey} />
       </div>
     </main>
   );

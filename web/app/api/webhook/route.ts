@@ -122,8 +122,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // protocol hrefs as a security measure, so the button would do nothing.
   // The /activate page fires the deep link client-side once we're back in
   // browser context, which works because it's a user-gesture navigation.
+  //
+  // SECURITY: key is placed in the URL fragment (#key=...), NOT the query
+  // string. Fragments are never sent to the server, never logged by Vercel
+  // or any HTTP proxy in the path, and never appear in Referer headers.
+  // The /activate page reads it client-side via window.location.hash.
   const siteUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
-  const deepLink = `${siteUrl}/activate?key=${encodeURIComponent(key)}`;
+  const deepLink = `${siteUrl}/activate#key=${encodeURIComponent(key)}`;
   try {
     await resend.emails.send({
       from: env.RESEND_FROM_EMAIL,

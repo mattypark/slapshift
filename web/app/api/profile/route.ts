@@ -18,8 +18,18 @@
 
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase";
+import { checkRateLimit, clientIp } from "@/app/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
+
+// Per-IP cap on onboarding posts. A real user advances through the funnel in
+// 4-6 POSTs (usage → source → privacy → slap-test → paywall). 15/min leaves
+// generous headroom for retries and double-clicks while killing scripted
+// abuse that would otherwise spray fake rows into onboarding_profiles. The
+// upsert is keyed on email, so a single email can't bloat the table — but
+// without this gate, a cycling-email attacker can.
+const RATE_LIMIT = 15;
+const RATE_WINDOW_S = 60;
 
 const MAX_NAME = 120;
 const MAX_EMAIL = 254;
@@ -68,6 +78,17 @@ function isValidEmail(email: string): boolean {
 }
 
 export async function POST(req: Request) {
+  const ip = clientIp(req);
+  const rl = await checkRateLimit({
+    ip,
+    endpoint: "profile",
+    limit: RATE_LIMIT,
+    windowSeconds: RATE_WINDOW_S,
+  });
+  if (!rl.ok) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
   let body: unknown;
   try {
     body = await req.json();

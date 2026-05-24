@@ -18,12 +18,28 @@
 // 2s for up to MAX_WAIT_SECONDS, then falls back to "check your email."
 // Once the key arrives, <AutoActivate> client-fires the slapshift:// deep
 // link automatically so the buyer doesn't have to click anything extra.
+//
+// SECURITY (reveal-once):
+//   The session_id in the URL ends up in Vercel function/access logs, browser
+//   history, and any Referer header sent to an external link. Without further
+//   protection, anyone who reads those logs can refetch /success and harvest
+//   the plaintext key. Two layers of defense close this:
+//     1. Reveal-once: the FIRST successful render atomically sets
+//        licenses.revealed_at=now() and is the only response that includes
+//        the key. Subsequent fetches show "check your email" instead.
+//     2. Session age cap: the reveal path only fires for sessions created in
+//        the last REVEAL_WINDOW_SECONDS. Older session_ids stop yielding the
+//        key even if revealed_at somehow wasn't set.
+//   The /activate email link is fragment-based (#key=...) so the key never
+//   needs to traverse the network in a URL query string at all.
 
 import Link from "next/link";
 import { stripe } from "@/app/lib/stripe";
 import { looksLikeKey } from "@/app/lib/license";
+import { supabaseAdmin } from "@/app/lib/supabase";
 import { CopyKeyButton } from "./CopyKeyButton";
 import { AutoActivate } from "./AutoActivate";
+import { ScrubUrl } from "./ScrubUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +49,11 @@ type Search = { [key: string]: string | string[] | undefined };
 // and pointing the buyer at email. Stripe webhooks usually deliver in
 // under a second, but cold lambdas + DB writes can push it to 5-10s.
 const MAX_WAIT_SECONDS = 20;
+
+// How long after Stripe creates the Checkout Session we'll still reveal the
+// key. The legitimate redirect lands within seconds. Anything older is
+// almost certainly someone fishing session_ids out of logs.
+const REVEAL_WINDOW_SECONDS = 30 * 60;
 
 export default async function SuccessPage({
   searchParams,
@@ -53,11 +74,18 @@ export default async function SuccessPage({
   let key: string | null = null;
   let email: string | null = null;
   let paid = false;
+  let sessionAgeSeconds = Number.POSITIVE_INFINITY;
 
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     paid = session.payment_status === "paid";
     email = session.customer_details?.email ?? session.customer_email ?? null;
+    // Stripe `created` is Unix seconds. Anything older than REVEAL_WINDOW_SECONDS
+    // is past the legitimate post-checkout redirect window and we will refuse
+    // to reveal the key even if the metadata still has it.
+    if (typeof session.created === "number") {
+      sessionAgeSeconds = Math.max(0, Math.floor(Date.now() / 1000) - session.created);
+    }
     const maybeKey = session.metadata?.license_key;
     if (typeof maybeKey === "string" && looksLikeKey(maybeKey)) {
       key = maybeKey;
@@ -96,10 +124,67 @@ export default async function SuccessPage({
     );
   }
 
+  // Reveal-once gate. The session_id can leak via Vercel logs, browser history,
+  // and Referer headers, so we MUST NOT render the key just because someone
+  // can replay the session_id. Two layers:
+  //
+  //   1. Age cap: if the Checkout Session is older than REVEAL_WINDOW_SECONDS
+  //      we refuse outright. The legitimate redirect lands within seconds.
+  //   2. Atomic flag: we try to flip licenses.revealed_at from NULL → now()
+  //      in a single UPDATE ... WHERE revealed_at IS NULL ... RETURNING.
+  //      Only the request that observed NULL gets a row back. Every subsequent
+  //      request — including log-mining attackers replaying the same session_id
+  //      seconds later — sees an empty result and gets the email fallback.
+  //
+  // The buyer's actual recovery path on a missed reveal is the Resend email,
+  // which contains the key + an /activate#key=... link.
+  if (sessionAgeSeconds > REVEAL_WINDOW_SECONDS) {
+    return (
+      <ErrorShell
+        title="Your key has been sent to your email."
+        body="This checkout session is no longer eligible to display the license key in the browser. Open the email from licenses@slapshift.app, copy the key, then open SlapShift and paste it into the license field."
+      />
+    );
+  }
+
+  // Atomic claim. Postgres guarantees only one concurrent UPDATE matches
+  // the `revealed_at IS NULL` predicate. .select() forces the row(s) back
+  // so we can tell winner from loser without a second round-trip.
+  let claimed = false;
+  try {
+    const { data: revealedRows, error: revealErr } = await supabaseAdmin
+      .from("licenses")
+      .update({ revealed_at: new Date().toISOString() })
+      .eq("stripe_session_id", sessionId)
+      .is("revealed_at", null)
+      .select("id");
+    if (revealErr) {
+      // Don't reveal on DB error. Email is the safety net.
+      console.warn(`[success] reveal-once update failed for ${sessionId}:`, revealErr.message);
+    } else {
+      claimed = Array.isArray(revealedRows) && revealedRows.length > 0;
+    }
+  } catch (err) {
+    console.warn(`[success] reveal-once update threw for ${sessionId}:`, err);
+  }
+
+  if (!claimed) {
+    return (
+      <ErrorShell
+        title="Your key has been sent to your email."
+        body="The license key for this purchase has already been revealed once. Check the email from licenses@slapshift.app — it has your key and a one-click activation link."
+      />
+    );
+  }
+
   const deepLink = `slapshift://license?key=${encodeURIComponent(key)}`;
 
   return (
     <main className="min-h-screen bg-[var(--cream,#f4ecdc)] text-[var(--ink,#1a1a1a)] flex items-center justify-center px-6 py-16">
+      {/* Belt-and-suspenders: remove session_id from the address bar after first
+          paint. The atomic reveal-once flag above is the real defense — this
+          just prevents shoulder-surf + Referer leakage on outbound link clicks. */}
+      <ScrubUrl />
       {/* Auto-fires the slapshift:// deep link 400ms after mount so the buyer
           doesn't have to manually click Activate. Safe in modern browsers as
           a same-origin top-level navigation triggered shortly after a real

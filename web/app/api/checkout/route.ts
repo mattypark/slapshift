@@ -21,8 +21,16 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/app/lib/stripe";
 import { env } from "@/app/lib/env";
+import { checkRateLimit, clientIp } from "@/app/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
+
+// Per-IP cap on checkout-session creation. Each call mints a fresh Stripe
+// Checkout Session — unthrottled, a scripted attacker can burn through our
+// Stripe API quota and spam orphan sessions. 10/min/IP is generous for any
+// legitimate buyer (one Buy click) while killing scripted spray.
+const RATE_LIMIT = 10;
+const RATE_WINDOW_S = 60;
 
 type CheckoutOptions = {
   email?: string;
@@ -69,7 +77,17 @@ async function createCheckoutSession(opts: CheckoutOptions = {}) {
   return stripe.checkout.sessions.create(params);
 }
 
-export async function POST() {
+export async function POST(req: Request) {
+  const ip = clientIp(req);
+  const rl = await checkRateLimit({
+    ip,
+    endpoint: "checkout",
+    limit: RATE_LIMIT,
+    windowSeconds: RATE_WINDOW_S,
+  });
+  if (!rl.ok) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
   try {
     const session = await createCheckoutSession();
     if (!session.url) {
@@ -84,6 +102,18 @@ export async function POST() {
 }
 
 export async function GET(req: NextRequest) {
+  const ip = clientIp(req);
+  const rl = await checkRateLimit({
+    ip,
+    endpoint: "checkout",
+    limit: RATE_LIMIT,
+    windowSeconds: RATE_WINDOW_S,
+  });
+  if (!rl.ok) {
+    // GET path is hit via NSWorkspace.open from the Mac app — JSON would look
+    // like a broken page. Redirect back to landing with a flag instead.
+    return NextResponse.redirect(`${env.NEXT_PUBLIC_SITE_URL}/?checkout=rate_limited`, 303);
+  }
   try {
     const email = req.nextUrl.searchParams.get("email") ?? undefined;
     const promo = req.nextUrl.searchParams.get("promo") ?? undefined;
