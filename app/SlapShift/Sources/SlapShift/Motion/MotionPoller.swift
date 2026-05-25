@@ -101,7 +101,25 @@ final class MotionPoller {
     private static let accelUsage = 3
     private static let scaleQ16 = 65536.0
 
+    /// Counts reports observed since start(). Used by the 3-second "no
+    /// samples" watchdog so we can distinguish "open succeeded but the
+    /// sensor is stuck powered off" from "user just hasn't slapped yet".
+    private var sampleCount: Int = 0
+    /// Counts raw reports that arrived but parsed to junk (out-of-range
+    /// magnitude). Friend's machine with a different report layout shows
+    /// up here — many reports received, zero valid magnitudes.
+    private var rejectedCount: Int = 0
+
     func start() throws {
+        // Wake the underlying SPU drivers first. Setting these properties
+        // on the device alone (post-open) is what we used to do; it worked
+        // on this Mac but failed silently on other M-series machines where
+        // the sensor came up powered off. Spank's reference port writes the
+        // same wake properties to the AppleSPUHIDDriver service (one level
+        // above the HIDDevice) BEFORE opening, which is what actually
+        // forces the sensor block on. Doing both is harmless.
+        Self.wakeSPUDriverServices()
+
         let service = try findAccelerometerService()
         accelService = service
 
@@ -114,7 +132,8 @@ final class MotionPoller {
             throw MotionError.deviceOpenFailed(openResult)
         }
 
-        // Wake the sensor. Without these properties the device opens but emits zero reports.
+        // Wake the sensor at the device level too. Without these properties
+        // the device opens but emits zero reports on some MacBook generations.
         IOHIDDeviceSetProperty(dev, "ReportInterval" as CFString, 1000 as CFNumber)
         IOHIDDeviceSetProperty(dev, "SensorPropertyReportingState" as CFString, 1 as CFNumber)
         IOHIDDeviceSetProperty(dev, "SensorPropertyPowerState" as CFString, 1 as CFNumber)
@@ -133,6 +152,57 @@ final class MotionPoller {
         )
 
         IOHIDDeviceScheduleWithRunLoop(dev, CFRunLoopGetMain(), CFRunLoopMode.defaultMode.rawValue)
+
+        // Watchdog — if no samples arrive within 3s, the sensor never woke.
+        // Print a clear diagnostic instead of leaving the user with a silent
+        // app. Visible in Console.app filtered by "SlapShift" so a remote
+        // tester can screenshot it for us.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            guard let self = self else { return }
+            if self.sampleCount == 0 {
+                print("[motion] WARNING: 0 reports in 3s after start — sensor not emitting. Hardware: \(Self.macHardwareString()). Likely cause: SPU driver wake failed or this Mac lacks the BMI286 IMU (base M1, Intel, iMac/Mac mini/Mac Studio).")
+            } else if self.rejectedCount > self.sampleCount / 2 {
+                print("[motion] WARNING: \(self.rejectedCount)/\(self.sampleCount) reports rejected (magnitude out of 0.3–50g range) on \(Self.macHardwareString()) — possible report layout change vs verified M-series. First-sample debug logging is enabled.")
+            } else {
+                print("[motion] OK: \(self.sampleCount) reports in 3s on \(Self.macHardwareString())")
+            }
+        }
+    }
+
+    /// Best-effort wake of every AppleSPUHIDDriver instance in the IORegistry.
+    /// Mirrors what `taigrr/apple-silicon-accelerometer` does in Go. Setting
+    /// these properties at the driver level powers the sensor block on; the
+    /// HIDDevice layer above only gets reports once the driver is awake.
+    private static func wakeSPUDriverServices() {
+        guard let matching = IOServiceMatching("AppleSPUHIDDriver") else { return }
+        var iterator: io_iterator_t = 0
+        let kr = IOServiceGetMatchingServices(kIOMainPortDefault, matching, &iterator)
+        guard kr == KERN_SUCCESS else { return }
+        defer { IOObjectRelease(iterator) }
+
+        var service = IOIteratorNext(iterator)
+        while service != 0 {
+            IORegistryEntrySetCFProperty(service, "SensorPropertyReportingState" as CFString, 1 as CFNumber)
+            IORegistryEntrySetCFProperty(service, "SensorPropertyPowerState" as CFString, 1 as CFNumber)
+            IORegistryEntrySetCFProperty(service, "ReportInterval" as CFString, 1000 as CFNumber)
+            IOObjectRelease(service)
+            service = IOIteratorNext(iterator)
+        }
+    }
+
+    /// Returns a short hardware identifier for diagnostic logs.
+    /// Example: "MacBookPro18,3 / arm64". Reads sysctl `hw.model` and
+    /// `hw.machine`. Safe to call from any thread.
+    private static func macHardwareString() -> String {
+        func sysctlString(_ name: String) -> String {
+            var size: Int = 0
+            sysctlbyname(name, nil, &size, nil, 0)
+            guard size > 0 else { return "?" }
+            var buf = [CChar](repeating: 0, count: size)
+            sysctlbyname(name, &buf, &size, nil, 0)
+            return String(cString: buf)
+        }
+        return "\(sysctlString("hw.model")) / \(sysctlString("hw.machine"))"
     }
 
     func stop() {
@@ -198,19 +268,36 @@ final class MotionPoller {
     }
 
     private func handleReport(_ report: UnsafePointer<UInt8>, length: Int) {
+        sampleCount += 1
+
         guard length >= 18,
               let rx = Self.readInt32LE(report, length: length, offset: 6),
               let ry = Self.readInt32LE(report, length: length, offset: 10),
               let rz = Self.readInt32LE(report, length: length, offset: 14)
-        else { return }
+        else {
+            rejectedCount += 1
+            return
+        }
 
         let gx = Double(rx) / Self.scaleQ16
         let gy = Double(ry) / Self.scaleQ16
         let gz = Double(rz) / Self.scaleQ16
         let mag = (gx*gx + gy*gy + gz*gz).squareRoot()
 
+        // Print the first 3 raw reports + parsed magnitudes so a remote tester
+        // running Console.app can copy the hex into a bug report. Cheap (only
+        // fires three times total) and the only way to spot a report-layout
+        // mismatch without round-tripping the binary to us.
+        if sampleCount <= 3 {
+            let hex = (0..<min(length, 22)).map { String(format: "%02x", report[$0]) }.joined(separator: " ")
+            print(String(format: "[motion] sample %d len=%d mag=%.3fg raw=%@", sampleCount, length, mag, hex))
+        }
+
         // Sanity: reject garbage parses. Real magnitudes are ~0.8g (light freefall) to ~10g (hard slap).
-        guard mag > 0.3 && mag < 50.0 else { return }
+        guard mag > 0.3 && mag < 50.0 else {
+            rejectedCount += 1
+            return
+        }
 
         let sample = MotionSample(
             timestamp: Date().timeIntervalSince(startedAt),
