@@ -138,7 +138,13 @@ if [ -n "$SPARKLE_BIN" ]; then
     echo "Sparkle signature:"
     echo "  $SIG_LINE"
     cp "$DMG_PATH" "$WEB_DL/SlapShift-$VERSION.dmg"
+    # "latest" mirror: Vercel's DMG_URL env points at /dl/SlapShift-latest.dmg
+    # so the marketing download link auto-updates every release without
+    # touching the dashboard. Sparkle appcast still points at the versioned
+    # file so update verification stays exact.
+    cp "$DMG_PATH" "$WEB_DL/SlapShift-latest.dmg"
     echo "Staged: web/public/dl/SlapShift-$VERSION.dmg"
+    echo "Staged: web/public/dl/SlapShift-latest.dmg (Vercel DMG_URL target)"
     echo ""
     echo "Drop this <item> into web/public/appcast.xml (above the others):"
     echo ""

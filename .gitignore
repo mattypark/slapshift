@@ -24,6 +24,9 @@ out/
 # Logs
 *.log
 
-# Notarization artifacts
+# Notarization artifacts (build/ is also covered above)
 *.dmg
 *.zip
+# Exception: DMGs staged for Vercel CDN. Sparkle auto-update fetches these
+# from slapshift.app/dl/, so they MUST be tracked + pushed for prod 404s.
+!web/public/dl/*.dmg
