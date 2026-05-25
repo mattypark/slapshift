@@ -84,6 +84,9 @@ export default function Landing() {
         <ModesSection />
       </Reveal>
       <Reveal>
+        <ChallengeSection />
+      </Reveal>
+      <Reveal>
         <AlsoSection />
       </Reveal>
       <Reveal>
@@ -499,6 +502,106 @@ function SlapCountPip({ count }: { count: number }) {
 // Centered alignment — break from the off-center modes section above.
 // =============================================================================
 
+// =============================================================================
+// 03 — Viral video challenge. Two tiers, payout for views, tag-to-claim.
+// =============================================================================
+
+function ChallengeSection() {
+  const tiers = [
+    {
+      threshold: "25,000",
+      payout: "Full refund",
+      sub: "You get your $9.99 back. Effectively free.",
+    },
+    {
+      threshold: "50,000",
+      payout: "Refund + $10",
+      sub: "Your $9.99 back, plus $10 cash on top.",
+      featured: true,
+    },
+  ];
+
+  return (
+    <section className="bg-[var(--cream-deeper)] py-24">
+      <div className="max-w-6xl mx-auto px-8">
+        <SectionLabel num="03" text="Get paid to slap" />
+        <div className="grid md:grid-cols-12 gap-8 mb-14">
+          <div className="md:col-span-7">
+            <h2
+              className="text-4xl md:text-6xl font-serif text-[var(--ink)] leading-[1.02]"
+              style={{ fontFamily: "var(--font-serif)" }}
+            >
+              Go viral.
+              <br />
+              <em>We pay you back.</em>
+            </h2>
+          </div>
+          <div className="md:col-span-5 md:pt-6">
+            <p className="font-mono-tracked text-sm text-[var(--mute)] leading-relaxed">
+              Post a video of you using SlapShift on Instagram or TikTok.
+              Tag us. Hit the view threshold within 30 days of posting and
+              we send the money. No application, no contract — just post,
+              tag, and screenshot the view count.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6 mb-10">
+          {tiers.map((t) => (
+            <div
+              key={t.threshold}
+              className={`border ${
+                t.featured
+                  ? "border-[var(--accent)] bg-[var(--cream)]"
+                  : "border-[var(--rule)] bg-[var(--cream)]"
+              } p-8 flex flex-col gap-3`}
+            >
+              <div className="font-mono-tracked text-xs uppercase tracking-[0.2em] text-[var(--mute)]">
+                {t.threshold} views
+              </div>
+              <div
+                className={`font-serif text-3xl leading-tight ${
+                  t.featured ? "text-[var(--accent)]" : "text-[var(--ink)]"
+                }`}
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                {t.payout}
+              </div>
+              <p className="font-mono-tracked text-xs text-[var(--mute)] leading-relaxed">
+                {t.sub}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="border border-[var(--rule)] bg-[var(--cream)] p-6">
+          <div className="font-mono-tracked text-xs uppercase tracking-[0.2em] text-[var(--mute)] mb-3">
+            How to claim
+          </div>
+          <ol className="font-mono-tracked text-sm text-[var(--ink)] leading-relaxed space-y-1.5">
+            <li>1. Post a video using SlapShift on Instagram or TikTok.</li>
+            <li>
+              2. Tag{" "}
+              <span className="text-[var(--accent)]">@matty.park</span> on
+              Instagram or{" "}
+              <span className="text-[var(--accent)]">@mattparxy</span> on
+              TikTok.
+            </li>
+            <li>
+              3. Within 30 days, DM a screenshot of the view count once you
+              cross 25K or 50K. We&apos;ll Venmo / PayPal you within 48 hours.
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// =============================================================================
+// 04 — Also it does these things. Centered, eight feature tiles.
+// =============================================================================
+
 function AlsoSection() {
   const features = [
     {
@@ -546,7 +649,7 @@ function AlsoSection() {
   return (
     <section className="bg-[var(--cream-deeper)] py-24">
       <div className="max-w-6xl mx-auto px-8">
-        <SectionLabel num="03" text="Also it does these things" align="center" />
+        <SectionLabel num="04" text="Also it does these things" align="center" />
         <h2
           className="text-4xl md:text-5xl font-serif text-[var(--ink)] text-center leading-[1.05] max-w-3xl mx-auto mb-14"
           style={{ fontFamily: "var(--font-serif)" }}
@@ -604,7 +707,7 @@ function NerdySection() {
   return (
     <section className="bg-[var(--cream)] py-24">
       <div className="max-w-6xl mx-auto px-8">
-        <SectionLabel num="04" text="Nerdy tech details" align="right" />
+        <SectionLabel num="05" text="Nerdy tech details" align="right" />
         <div className="grid md:grid-cols-12 gap-10 items-start">
           <div className="md:col-span-5">
             <h2
@@ -708,7 +811,7 @@ function FaqSection() {
   return (
     <section className="bg-[var(--cream)] py-24">
       <div className="max-w-4xl mx-auto px-8">
-        <SectionLabel num="05" text="Frequently asked" align="center" />
+        <SectionLabel num="06" text="Frequently asked" align="center" />
         <h2
           className="text-4xl md:text-5xl font-serif text-[var(--ink)] text-center leading-[1.05] mb-12"
           style={{ fontFamily: "var(--font-serif)" }}
