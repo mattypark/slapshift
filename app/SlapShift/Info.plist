@@ -47,5 +47,13 @@
 	<string>SlapShift uses Apple Events to run Focus shortcuts when you slap your MacBook.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Matthew Park. All rights reserved.</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://slapshift.app/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>qTThVB+A2Z682rwrMcxpPmWNFb95dBQ5PMWeqlC1fl0=</string>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>

@@ -508,15 +508,42 @@ private struct SlapTestStep: View {
 private struct SlapTestMeter: View {
     @ObservedObject var state: OnboardingState
     @ObservedObject var monitor: MotionMonitor
+    /// Sensitivity threshold, sourced from the same singleton the classifier
+    /// reads from. Drives the vertical rule on the meter so the user can see
+    /// exactly how hard they need to slap to clear the bar.
+    @ObservedObject private var prefs = AppPreferences.shared
 
-    /// Range the meter visualizes. 1g is resting; 6g comfortably covers a
-    /// firm slap on Apple Silicon laptops.
-    private let minG: Double = 1.0
-    private let maxG: Double = 6.0
+    /// Range the meter visualizes. Real palm slaps on Apple Silicon peak
+    /// around 1.05-1.15g, so a 1.0-6.0 span was effectively a flat empty bar
+    /// — the user would slap hard and see ~3% fill. 0.8-1.5g gives the user
+    /// a useful dynamic range: rest sits at the lower-third, soft tap fills
+    /// to about half, firm slap pegs the bar.
+    private let minG: Double = 0.8
+    private let maxG: Double = 1.5
 
     private var fillFraction: Double {
         let clamped = min(max(monitor.recentPeakG, minG), maxG)
         return (clamped - minG) / (maxG - minG)
+    }
+
+    /// Where to draw the vertical "slap counts above this" line, as a
+    /// fraction of bar width. Clamped so the rule never sits on the bar's
+    /// edge stroke (looks like a glitch).
+    private var thresholdFraction: Double {
+        let clamped = min(max(prefs.slapThresholdG, minG), maxG)
+        return (clamped - minG) / (maxG - minG)
+    }
+
+    /// Drives the countdown bar at ~30fps without each subview having to own
+    /// a Timer. Re-evaluates `secondsRemaining` on every tick while a
+    /// multi-slap window is open; idle when windowEndsAt is nil.
+    private let countdownTick = Timer.publish(every: 1.0 / 30.0, on: .main, in: .common).autoconnect()
+    @State private var secondsRemaining: TimeInterval = 0
+
+    /// Fraction (0…1) of the window still open. 1 = just opened, 0 = closed.
+    private var windowFraction: Double {
+        guard prefs.slapWindowSeconds > 0 else { return 0 }
+        return min(max(secondsRemaining / prefs.slapWindowSeconds, 0), 1)
     }
 
     var body: some View {
@@ -529,11 +556,18 @@ private struct SlapTestMeter: View {
                 .font(.slapTitle(size: 24))
                 .foregroundStyle(Brand.ink)
 
-            Text("Slap the palm rest. We'll show how hard the laptop felt it. You can tune sensitivity later in Settings.")
+            Text("Slap the palm rest. The red line is the slap threshold — anything above it counts. Tune sensitivity later in Settings.")
                 .font(.slapBody(size: 13))
                 .foregroundStyle(Brand.mute)
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
+                .frame(maxWidth: 460)
+
+            // Live in-progress count + window countdown. Shows up only while a
+            // multi-slap window is open (first slap landed, classifier waiting
+            // for follow-ups). Three pills (1/2/3) light up as the user lands
+            // each slap; the bar under them shrinks as the window closes.
+            countdownStrip
                 .frame(maxWidth: 460)
 
             GeometryReader { geo in
@@ -549,21 +583,44 @@ private struct SlapTestMeter: View {
                         .fill(Brand.accent)
                         .frame(width: max(0, geo.size.width * fillFraction))
                         .animation(.easeOut(duration: 0.12), value: monitor.recentPeakG)
+
+                    // Threshold rule. Sits in front of the fill so it stays
+                    // visible even when the bar pegs past it. 2px wide and
+                    // slightly taller than the bar so it reads as a marker,
+                    // not part of the fill.
+                    Rectangle()
+                        .fill(Color.red)
+                        .frame(width: 2, height: 30)
+                        .offset(x: max(0, geo.size.width * thresholdFraction) - 1, y: -4)
                 }
             }
             .frame(height: 22)
             .frame(maxWidth: 460)
 
             HStack {
-                Text("\(String(format: "%.1f", monitor.recentPeakG))g")
+                Text("\(String(format: "%.2f", monitor.recentPeakG))g now")
                     .font(.slapMeta(size: 11))
                     .foregroundStyle(Brand.mute)
                 Spacer()
-                Text("Peak: \(String(format: "%.1f", state.calibrationPeakG))g")
+                Text("Threshold: \(String(format: "%.2f", prefs.slapThresholdG))g")
+                    .font(.slapMeta(size: 11))
+                    .foregroundStyle(.red)
+                Spacer()
+                Text("Peak: \(String(format: "%.2f", state.calibrationPeakG))g")
                     .font(.slapMeta(size: 11))
                     .foregroundStyle(Brand.mute)
             }
             .frame(maxWidth: 460)
+
+            // How the count maps to modes + the exact time window. Keeps the
+            // demo screen self-explanatory so the user understands WHY there
+            // are three pills and what the bar is counting down toward.
+            Text("1 slap fires mode 1 · 2 slaps fires mode 2 · 3 slaps fires mode 3. Land follow-up slaps within \(String(format: "%.2f", prefs.slapWindowSeconds))s of the first one.")
+                .font(.slapMeta(size: 11))
+                .foregroundStyle(Brand.mute)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .frame(maxWidth: 460)
         }
         .onChange(of: monitor.recentPeakG) { newValue in
             // Latch the highest peak we've seen so the "Peak" readout
@@ -573,6 +630,64 @@ private struct SlapTestMeter: View {
                 state.calibrationPeakG = newValue
             }
         }
+        .onReceive(countdownTick) { _ in
+            // Recompute seconds-remaining off the wall-clock deadline the
+            // monitor stashed when the window opened. Cheap: ~30 ticks/sec
+            // for at most 0.85s per slap cluster.
+            if let end = monitor.windowEndsAt {
+                secondsRemaining = max(0, end.timeIntervalSinceNow)
+            } else {
+                secondsRemaining = 0
+            }
+        }
+    }
+
+    /// Three count pills + a shrinking time-remaining bar. Visible only while
+    /// `inProgressCount > 0`; otherwise renders an invisible placeholder of
+    /// the same height so the layout doesn't jump when the strip appears.
+    @ViewBuilder
+    private var countdownStrip: some View {
+        let active = monitor.inProgressCount > 0
+        VStack(spacing: 8) {
+            HStack(spacing: 10) {
+                ForEach(1...3, id: \.self) { i in
+                    Text("\(i)")
+                        .font(.slapMeta(size: 12))
+                        .foregroundStyle(
+                            active && monitor.inProgressCount >= i ? Brand.paper : Brand.mute
+                        )
+                        .frame(width: 28, height: 28)
+                        .background(
+                            Circle().fill(
+                                active && monitor.inProgressCount >= i
+                                    ? Brand.accent
+                                    : Brand.paper
+                            )
+                        )
+                        .overlay(
+                            Circle().stroke(Brand.rule.opacity(0.6), lineWidth: 1)
+                        )
+                }
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(Brand.paper)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .stroke(Brand.rule.opacity(0.5), lineWidth: 1)
+                        )
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(Brand.accent)
+                        .frame(width: max(0, geo.size.width * windowFraction))
+                }
+            }
+            .frame(height: 5)
+            .opacity(active ? 1 : 0)
+        }
+        .opacity(active ? 1 : 0.35)
+        .animation(.easeOut(duration: 0.12), value: monitor.inProgressCount)
     }
 }
 

@@ -237,8 +237,10 @@ private struct SensitivityMeter: View {
     let lastSlapCount: Int
 
     /// Magnitude span the strip visualizes. Anything outside is clamped to
-    /// the edges.
-    private let scaleMin: Double = 1.00
+    /// the edges. 0.8g floor shows the sub-gravity dip on a real slap
+    /// rebound (the discriminator that filters shake); 1.5g ceiling covers a
+    /// firm slap on Apple Silicon laptops without wasting bar real estate.
+    private let scaleMin: Double = 0.80
     private let scaleMax: Double = 1.50
 
     private let barCount: Int = 40

@@ -17,6 +17,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let stats = SlapStats()
 private let licenseManager = LicenseManager()
 let motionMonitor = MotionMonitor()
+    /// Sparkle auto-updater. Owned by AppDelegate so its background check
+    /// timer lives for the app's lifetime. Manual checks route through here
+    /// from both the menu bar "Check for Updates…" item and the main-menu
+    /// Apple-style "Check for Updates…" item.
+    private let autoUpdater = AutoUpdater()
     private var menuBar: MenuBarController!
     private var motion: MotionPoller!
     private var classifier: SlapClassifier!
@@ -73,6 +78,9 @@ let motionMonitor = MotionMonitor()
             self?.handleSlap(SlapEvent(count: count, peakG: 1.20, timestamp: 0))
         }
         menuBar.onSignOut = { [weak self] in self?.confirmAndSignOut() }
+        menuBar.onCheckForUpdates = { [weak self] in
+            self?.autoUpdater.checkForUpdates(nil)
+        }
 
         // Rebuild the menu when modes change so "1 slap → Coding" labels stay accurate.
         modeStore.$modes
@@ -103,6 +111,12 @@ let motionMonitor = MotionMonitor()
             // sensor working during onboarding demo steps.
             self?.motionMonitor.recordSlap(event)
             self?.handleSlap(event)
+        }
+        // Live in-progress count → meter, so onboarding can render "Slap 1 →
+        // 2 → 3" + a shrinking time-remaining bar while the user is still
+        // inside the multi-slap window.
+        classifier.onProgress = { [weak self] count, secondsLeft in
+            self?.motionMonitor.recordProgress(count: count, secondsUntilDeadline: secondsLeft)
         }
 
         // Live-bind the sensitivity slider to the classifier threshold.
@@ -230,6 +244,16 @@ let motionMonitor = MotionMonitor()
         appMenu.addItem(withTitle: "About SlapShift",
                         action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
                         keyEquivalent: "")
+        // Apple HIG: "Check for Updates…" lives in the app menu, right after
+        // About. Routes to Sparkle's standard user-initiated check (shows
+        // "you're up to date" when nothing new).
+        let checkForUpdates = NSMenuItem(
+            title: "Check for Updates…",
+            action: #selector(AutoUpdater.checkForUpdates(_:)),
+            keyEquivalent: ""
+        )
+        checkForUpdates.target = autoUpdater
+        appMenu.addItem(checkForUpdates)
         appMenu.addItem(NSMenuItem.separator())
         appMenu.addItem(withTitle: "Hide SlapShift",
                         action: #selector(NSApplication.hide(_:)),
@@ -423,11 +447,20 @@ let motionMonitor = MotionMonitor()
         // Persist on every step change. Cheap (one UserDefaults write per
         // Continue tap) and the only reliable hook — SwiftUI step transitions
         // happen via state.next()/back(), not a single call site we could
-        // wrap, so a Combine sink is the right seam.
+        // wrap, so a Combine sink is the right seam. Also auto-kick the
+        // permission poller whenever the user lands on .permission so that a
+        // grant performed WITHOUT clicking "Open System Settings" (e.g. the
+        // user already has the pane open, or macOS doesn't kill the app on
+        // grant) is detected live and the UI flips to "granted" instantly.
         state.$step
-            .dropFirst()  // ignore initial publish for the value we just set
-            .sink { newStep in
+            .sink { [weak self] newStep in
                 UserDefaults.standard.set(newStep.rawValue, forKey: Self.onboardingStepKey)
+                if newStep == .permission,
+                   MotionPoller.permissionStatus() != .granted {
+                    self?.startPermissionPolling()
+                } else if newStep != .permission {
+                    self?.stopPermissionPolling()
+                }
             }
             .store(in: &cancellables)
 

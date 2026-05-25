@@ -10,6 +10,7 @@
 		071B16AEA7F8EA694C4057E0 /* MotionPoller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 602FF5D2381F25350A9A1F40 /* MotionPoller.swift */; };
 		084C115D2B135915DD0DC37B /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16F5E333CB5248908BB80FBA /* HomeView.swift */; };
 		16EC9B529CC2CA0D333032D6 /* Newsreader-Italic.ttf in CopyFiles */ = {isa = PBXBuildFile; fileRef = 87E20DBE89D0E03E692659B8 /* Newsreader-Italic.ttf */; };
+		1A19796220639B3E84DFF6EA /* producthunt.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 58C94C248F5C19EF66EA7AC4 /* producthunt.png */; };
 		30DD673A4555E07AA8B76F08 /* HomeWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49BEC1017D103B47ACA4FFF2 /* HomeWindow.swift */; };
 		32D159DFA70008D11F0F354B /* Newsreader.ttf in CopyFiles */ = {isa = PBXBuildFile; fileRef = CA48E5C4E669A15908197AD2 /* Newsreader.ttf */; };
 		3AB31EBF95A04BD67D4030CC /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B695DE059AA81AC843AE133 /* MenuBarController.swift */; };
@@ -27,21 +28,27 @@
 		77D7A52C9BF7FADAEEFC2F3F /* LicenseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C891409186F26F4362ED8F7 /* LicenseManager.swift */; };
 		7A7CA335792EE633BFFAD68F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9002E979FA5B45DEC7C7A231 /* AppDelegate.swift */; };
 		8269FBA989EBAD0D6865B886 /* MotionPollerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84234D308B08BFF229ACCB89 /* MotionPollerTests.swift */; };
+		972B8D1966D6557C08B57CA1 /* AutoUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = D089DEDC05F9EE7186FB6C65 /* AutoUpdater.swift */; };
 		A08A2684CA05C660C32B6821 /* MotionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7935C6772578B132F88B4EFE /* MotionMonitor.swift */; };
 		A35EE61FBBB36239BEA83D7E /* SlapClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A32CE4FC92640735A2F59F5 /* SlapClassifierTests.swift */; };
+		AA0BEB49F80972C0FBE0C93C /* youtube.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = B138DC05FB8E5525412E9844 /* youtube.png */; };
 		AA0F9BD6A9FBA933FCA06963 /* LicenseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCC82794C788A56DE0EF81A6 /* LicenseStore.swift */; };
 		B005FDDFE8055A716A4F8C1A /* README.md in CopyFiles */ = {isa = PBXBuildFile; fileRef = 12D59EB33DDB463713779E16 /* README.md */; };
 		B7E2939CC971C0FBE26F36B9 /* ModeStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F27113984C8660446039CD96 /* ModeStoreTests.swift */; };
 		BB19E488BC8EC53FC99FD1DB /* SlapClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A3DFB51F4012E086C4EA9 /* SlapClassifier.swift */; };
+		C839647187A551E028BB95BE /* tiktok.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = E9CE6BEC8DFF02E59532FA6E /* tiktok.png */; };
 		CA24FB04243458124C578454 /* SlapStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEE1904230C2B2E1DE1F7390 /* SlapStats.swift */; };
 		CFD042B1155FB9A9099A9C63 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = E414BDEB5C04907D737212F8 /* AppPreferences.swift */; };
 		D27B4FF0936F6FF75B12FF36 /* InstalledApps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5428A62AF662CAC4815FDA /* InstalledApps.swift */; };
 		D37180A9E35019402FD23D67 /* DefaultModes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4032B66080C8B624E124F997 /* DefaultModes.swift */; };
+		D55FDCB9082A184CA8A4750D /* instagram.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = D43E487E4124FBB296D48FDF /* instagram.png */; };
+		DB9F19AFB34286CE5DCCCB83 /* x.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 224FCBD78A3D8434976ECA27 /* x.png */; };
 		E1D85244F2F1C2B45A1457E1 /* slapshiftlogo.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 800DB3133E312A9084F115C1 /* slapshiftlogo.png */; };
-		A1B2C3D4E5F60718293A4B5C /* Logos in CopyFiles */ = {isa = PBXBuildFile; fileRef = D1E2F3A4B5C6D7E8F9A0B1C2 /* Logos */; };
 		E35EE2B678CF5656DE9CCA00 /* Mode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A556487E70804D3A12DD3B1 /* Mode.swift */; };
 		E58B17FB21DC6231BC7B4BCC /* AppPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB23B055E750E9F508D51FBC /* AppPicker.swift */; };
+		E8AB1031319AA88137DEE1F1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 1313B2001C49C509F0807013 /* Sparkle */; };
 		EFFCCA2AB60C593D04FDD145 /* LicenseValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C759EF5AF9C852909AAEC6CB /* LicenseValidator.swift */; };
+		F545CE51D3277EC918670F14 /* reddit.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = CB7E17D3811056323C2034BB /* reddit.png */; };
 		FE7C27E12DC8C5B200913925 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08EE4E57BA4FD6FE0E89EB5C /* Theme.swift */; };
 		FF117B94FFCFCC3FFE22B901 /* SettingsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 693CBA3A98E239181250E394 /* SettingsWindow.swift */; };
 		FF4FE81DA9755B6526BCD718 /* ActionExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43E410050D64CB75A58967DF /* ActionExecutor.swift */; };
@@ -70,8 +77,13 @@
 				32D159DFA70008D11F0F354B /* Newsreader.ttf in CopyFiles */,
 				B005FDDFE8055A716A4F8C1A /* README.md in CopyFiles */,
 				54FB0238AA4653CF60332120 /* Sslap.png in CopyFiles */,
+				D55FDCB9082A184CA8A4750D /* instagram.png in CopyFiles */,
+				1A19796220639B3E84DFF6EA /* producthunt.png in CopyFiles */,
+				F545CE51D3277EC918670F14 /* reddit.png in CopyFiles */,
 				E1D85244F2F1C2B45A1457E1 /* slapshiftlogo.png in CopyFiles */,
-				A1B2C3D4E5F60718293A4B5C /* Logos in CopyFiles */,
+				C839647187A551E028BB95BE /* tiktok.png in CopyFiles */,
+				DB9F19AFB34286CE5DCCCB83 /* x.png in CopyFiles */,
+				AA0BEB49F80972C0FBE0C93C /* youtube.png in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -85,6 +97,7 @@
 		16F5E333CB5248908BB80FBA /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		1C891409186F26F4362ED8F7 /* LicenseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseManager.swift; sourceTree = "<group>"; };
 		1EB617ED1A8F2F00F8FFF23C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		224FCBD78A3D8434976ECA27 /* x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = x.png; sourceTree = "<group>"; };
 		32BF8BD0127D963CB65570C8 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		3A3E2FB2A9220881AA9A2DE3 /* SlapShift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SlapShift.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B695DE059AA81AC843AE133 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
@@ -92,12 +105,12 @@
 		43E410050D64CB75A58967DF /* ActionExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionExecutor.swift; sourceTree = "<group>"; };
 		49BEC1017D103B47ACA4FFF2 /* HomeWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeWindow.swift; sourceTree = "<group>"; };
 		4F5428A62AF662CAC4815FDA /* InstalledApps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstalledApps.swift; sourceTree = "<group>"; };
+		58C94C248F5C19EF66EA7AC4 /* producthunt.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = producthunt.png; sourceTree = "<group>"; };
 		602FF5D2381F25350A9A1F40 /* MotionPoller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionPoller.swift; sourceTree = "<group>"; };
 		693CBA3A98E239181250E394 /* SettingsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindow.swift; sourceTree = "<group>"; };
 		6A32CE4FC92640735A2F59F5 /* SlapClassifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlapClassifierTests.swift; sourceTree = "<group>"; };
 		7935C6772578B132F88B4EFE /* MotionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionMonitor.swift; sourceTree = "<group>"; };
 		800DB3133E312A9084F115C1 /* slapshiftlogo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = slapshiftlogo.png; sourceTree = "<group>"; };
-		D1E2F3A4B5C6D7E8F9A0B1C2 /* Logos */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Logos; sourceTree = "<group>"; };
 		84234D308B08BFF229ACCB89 /* MotionPollerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionPollerTests.swift; sourceTree = "<group>"; };
 		87E20DBE89D0E03E692659B8 /* Newsreader-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Newsreader-Italic.ttf"; sourceTree = "<group>"; };
 		8997A808B10C110842F39938 /* Sslap.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Sslap.png; sourceTree = "<group>"; };
@@ -107,18 +120,34 @@
 		A4E0FCEE9B87203FAEF5C7A4 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		A67BF3C4D852AB02923C29FA /* ModeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeStore.swift; sourceTree = "<group>"; };
 		AEE1904230C2B2E1DE1F7390 /* SlapStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlapStats.swift; sourceTree = "<group>"; };
+		B138DC05FB8E5525412E9844 /* youtube.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = youtube.png; sourceTree = "<group>"; };
 		B63CA65D6847B53A8A5054AA /* OnboardingWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWindow.swift; sourceTree = "<group>"; };
 		C43A3DFB51F4012E086C4EA9 /* SlapClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlapClassifier.swift; sourceTree = "<group>"; };
 		C759EF5AF9C852909AAEC6CB /* LicenseValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseValidator.swift; sourceTree = "<group>"; };
 		C76C1B96DA7D42E133BDD14C /* SlapShiftTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SlapShiftTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA48E5C4E669A15908197AD2 /* Newsreader.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Newsreader.ttf; sourceTree = "<group>"; };
 		CB23B055E750E9F508D51FBC /* AppPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPicker.swift; sourceTree = "<group>"; };
+		CB7E17D3811056323C2034BB /* reddit.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = reddit.png; sourceTree = "<group>"; };
+		D089DEDC05F9EE7186FB6C65 /* AutoUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoUpdater.swift; sourceTree = "<group>"; };
+		D43E487E4124FBB296D48FDF /* instagram.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = instagram.png; sourceTree = "<group>"; };
 		E414BDEB5C04907D737212F8 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
+		E9CE6BEC8DFF02E59532FA6E /* tiktok.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = tiktok.png; sourceTree = "<group>"; };
 		F18671B95C3F7CEC26A14E84 /* MachineId.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineId.swift; sourceTree = "<group>"; };
 		F27113984C8660446039CD96 /* ModeStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeStoreTests.swift; sourceTree = "<group>"; };
 		FBA3C8F9E488228008AF270D /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		FCC82794C788A56DE0EF81A6 /* LicenseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		51409AC1A9AC48CA3BE2F9E8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E8AB1031319AA88137DEE1F1 /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		1594837E0D417DC756898825 /* Onboarding */ = {
@@ -135,6 +164,19 @@
 				AEE1904230C2B2E1DE1F7390 /* SlapStats.swift */,
 			);
 			path = Stats;
+			sourceTree = "<group>";
+		};
+		241DEC812F72D1472F303424 /* Logos */ = {
+			isa = PBXGroup;
+			children = (
+				D43E487E4124FBB296D48FDF /* instagram.png */,
+				58C94C248F5C19EF66EA7AC4 /* producthunt.png */,
+				CB7E17D3811056323C2034BB /* reddit.png */,
+				E9CE6BEC8DFF02E59532FA6E /* tiktok.png */,
+				224FCBD78A3D8434976ECA27 /* x.png */,
+				B138DC05FB8E5525412E9844 /* youtube.png */,
+			);
+			path = Logos;
 			sourceTree = "<group>";
 		};
 		4305E32F6A19DE623AF67E02 /* Tests */ = {
@@ -163,11 +205,19 @@
 				CA48E5C4E669A15908197AD2 /* Newsreader.ttf */,
 				800DB3133E312A9084F115C1 /* slapshiftlogo.png */,
 				8997A808B10C110842F39938 /* Sslap.png */,
-				D1E2F3A4B5C6D7E8F9A0B1C2 /* Logos */,
 				98DEE559EF64C961829C0DA3 /* DefaultShortcuts */,
+				241DEC812F72D1472F303424 /* Logos */,
 			);
 			name = Resources;
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		671AA2C57A59BD6FAB2BA573 /* Updates */ = {
+			isa = PBXGroup;
+			children = (
+				D089DEDC05F9EE7186FB6C65 /* AutoUpdater.swift */,
+			);
+			path = Updates;
 			sourceTree = "<group>";
 		};
 		767E35532EDDB5F8E4FE90E9 = {
@@ -190,6 +240,7 @@
 				B13DF4727DA122A4B1900391 /* Settings */,
 				238A47407F3A5FDA9DC71468 /* Stats */,
 				EC5F1EF2ECAC3A230F097129 /* UI */,
+				671AA2C57A59BD6FAB2BA573 /* Updates */,
 			);
 			name = Sources;
 			path = SlapShift;
@@ -325,6 +376,7 @@
 			buildPhases = (
 				E390DC3D0CF892B29C2F42D1 /* Sources */,
 				87736D29287322CDABFC89BE /* CopyFiles */,
+				51409AC1A9AC48CA3BE2F9E8 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -332,6 +384,7 @@
 			);
 			name = SlapShift;
 			packageProductDependencies = (
+				1313B2001C49C509F0807013 /* Sparkle */,
 			);
 			productName = SlapShift;
 			productReference = 3A3E2FB2A9220881AA9A2DE3 /* SlapShift.app */;
@@ -363,6 +416,9 @@
 			);
 			mainGroup = 767E35532EDDB5F8E4FE90E9;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				FC4EEEBD5E73FFBC37CF85A7 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 57FEB39B06C591E343406F67 /* Products */;
 			projectDirPath = "";
@@ -393,6 +449,7 @@
 				7A7CA335792EE633BFFAD68F /* AppDelegate.swift in Sources */,
 				E58B17FB21DC6231BC7B4BCC /* AppPicker.swift in Sources */,
 				CFD042B1155FB9A9099A9C63 /* AppPreferences.swift in Sources */,
+				972B8D1966D6557C08B57CA1 /* AutoUpdater.swift in Sources */,
 				D37180A9E35019402FD23D67 /* DefaultModes.swift in Sources */,
 				084C115D2B135915DD0DC37B /* HomeView.swift in Sources */,
 				30DD673A4555E07AA8B76F08 /* HomeWindow.swift in Sources */,
@@ -665,6 +722,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		FC4EEEBD5E73FFBC37CF85A7 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1313B2001C49C509F0807013 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FC4EEEBD5E73FFBC37CF85A7 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 124E47249B82242C46D0C9E2 /* Project object */;
 }

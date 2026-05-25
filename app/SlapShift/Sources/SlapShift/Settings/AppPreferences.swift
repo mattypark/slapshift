@@ -27,18 +27,19 @@ final class AppPreferences: ObservableObject {
         }
     }
 
-    // Key suffix bumped to v2 on 2026-05-22 so existing users pick up the
-    // new forgiving defaults on next launch. The old keys tuned against a
-    // pre-hysteresis classifier weren't transferable anyway.
+    // Key suffix bumped to v5 on 2026-05-24 — v4 default (1.08g) was still
+    // too high for real palm slaps on Matthew's Mac (peak ~1.02-1.05g).
+    // v5 lowers trigger to 1.03g; shake is filtered by the classifier's
+    // sub-gravity release threshold, not the trigger height.
     private enum Keys {
-        static let threshold = "slap.threshold.g.v2"
-        static let window = "slap.window.seconds.v2"
+        static let threshold = "slap.threshold.g.v5"
+        static let window = "slap.window.seconds.v5"
         static let launchAtLogin = "launch.at.login"
     }
 
     /// Defaults match SlapClassifier's hardcoded defaults so onboarding and
     /// settings always agree out of the box. Tune both in lockstep.
-    static let defaultThresholdG: Double = 1.025
+    static let defaultThresholdG: Double = 1.03
     static let defaultWindowSeconds: Double = 0.85
 
     private init() {

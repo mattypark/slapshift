@@ -110,9 +110,72 @@ spctl --assess --type install --verbose "$DMG_PATH" || {
     echo "(but stapler validation succeeded, which is usually the canonical check)"
 }
 
+# 7. Sparkle sign_update + appcast snippet
+#
+# Sparkle's auto-update needs an EdDSA signature on the DMG. sign_update
+# reads the private key from the Mac's Keychain (created once by
+# `generate_keys`, see ops/README.md) and emits a one-line snippet ready
+# to drop into appcast.xml. We also stage the DMG into web/public/dl/ so
+# `git add` + push deploys it via Vercel.
+echo "--- [7/7] Sparkle sign + stage ---"
+
+SPARKLE_BIN="$(find ~/Library/Developer/Xcode/DerivedData -type f -name sign_update -not -path '*old_dsa_scripts*' 2>/dev/null | head -1)"
+if [ -z "$SPARKLE_BIN" ]; then
+    # Fallback: SPM resolves Sparkle artifacts here when built via swift build
+    SPARKLE_BIN="$(find "$APP_DIR/.build" -type f -name sign_update -not -path '*old_dsa_scripts*' 2>/dev/null | head -1)"
+fi
+if [ -z "$SPARKLE_BIN" ]; then
+    # Last resort: brew install sparkle ships sign_update too
+    SPARKLE_BIN="$(command -v sign_update || true)"
+fi
+
+WEB_DL="$ROOT/web/public/dl"
+APPCAST="$ROOT/web/public/appcast.xml"
+mkdir -p "$WEB_DL"
+
+if [ -n "$SPARKLE_BIN" ]; then
+    SIG_LINE="$("$SPARKLE_BIN" "$DMG_PATH")"
+    echo "Sparkle signature:"
+    echo "  $SIG_LINE"
+    cp "$DMG_PATH" "$WEB_DL/SlapShift-$VERSION.dmg"
+    echo "Staged: web/public/dl/SlapShift-$VERSION.dmg"
+    echo ""
+    echo "Drop this <item> into web/public/appcast.xml (above the others):"
+    echo ""
+    PUB_DATE="$(date -u +"%a, %d %b %Y %H:%M:%S +0000")"
+    cat <<EOF
+        <item>
+            <title>$VERSION</title>
+            <pubDate>$PUB_DATE</pubDate>
+            <sparkle:version>$VERSION</sparkle:version>
+            <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+                <h2>SlapShift $VERSION</h2>
+                <ul>
+                    <li>TODO: write changelog</li>
+                </ul>
+            ]]></description>
+            <enclosure
+                url="https://slapshift.app/dl/SlapShift-$VERSION.dmg"
+                $SIG_LINE
+                type="application/octet-stream"/>
+        </item>
+EOF
+    echo ""
+else
+    echo "warning: sign_update not found — skipping Sparkle signing."
+    echo "  Build the app once via Xcode (or swift build) so SPM resolves Sparkle artifacts,"
+    echo "  or install via Homebrew: brew install --cask sparkle"
+fi
+
 echo ""
 echo "=== Done ==="
 echo "DMG: $DMG_PATH"
 echo "Size: $(du -h "$DMG_PATH" | cut -f1)"
+echo "Appcast: $APPCAST"
 echo ""
-echo "Next: upload to your distribution host (R2 / S3 / Vercel blob) and publish."
+echo "Next steps:"
+echo "  1. Paste the <item> snippet above into web/public/appcast.xml"
+echo "  2. cd web && git add public/dl/SlapShift-$VERSION.dmg public/appcast.xml && git commit && git push"
+echo "  3. Vercel auto-deploys. Existing users get the update on next launch (or daily)."

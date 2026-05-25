@@ -1,0 +1,43 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+     version="2.0">
+    <channel>
+        <title>SlapShift Updates</title>
+        <link>https://slapshift.app/appcast.xml</link>
+        <description>Latest SlapShift releases</description>
+        <language>en</language>
+
+        <!--
+        Each <item> is one release. release.sh appends a new item here
+        automatically; the only thing you maintain by hand is the
+        <description><![CDATA[...]]></description> changelog text.
+
+        Newest release goes at the top. Sparkle picks the first item whose
+        sparkle:version > the running app's CFBundleShortVersionString.
+        -->
+
+        <item>
+            <title>0.1.0</title>
+            <pubDate>Mon, 25 May 2026 14:26:29 +0000</pubDate>
+            <sparkle:version>0.1.0</sparkle:version>
+            <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+                <h2>SlapShift 0.1.0</h2>
+                <p>First public release.</p>
+                <ul>
+                    <li>Slap detection on Apple Silicon MacBooks</li>
+                    <li>Three customizable modes (1, 2, 3 slaps)</li>
+                    <li>Open apps, quit apps, launch URLs per mode</li>
+                    <li>Auto-updates via Sparkle</li>
+                </ul>
+            ]]></description>
+            <enclosure
+                url="https://slapshift.app/dl/SlapShift-0.1.0.dmg"
+                sparkle:edSignature="zLeocfNinMoCIDEYhhEygs5er4bVyNanosrjY0/640/hdJAiH+ow+SYcBS4lzFGwMZcoR+Xk8d7ZKm9zG72PCA=="
+                length="4339652"
+                type="application/octet-stream"/>
+        </item>
+    </channel>
+</rss>

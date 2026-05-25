@@ -32,6 +32,10 @@ final class MenuBarController {
     var onOpenHome: (() -> Void)?
     var onTestSlap: ((Int) -> Void)?
     var onSignOut: (() -> Void)?
+    /// Triggers Sparkle's manual update check. Wired in AppDelegate to the
+    /// AutoUpdater so users with menu-bar-only workflows don't have to dig
+    /// into the main menu.
+    var onCheckForUpdates: (() -> Void)?
 
     private let modeStore: ModeStore
     private var statusItem: NSStatusItem?
@@ -136,6 +140,15 @@ final class MenuBarController {
         menu.addItem(testParent)
         menu.addItem(.separator())
 
+        let checkUpdates = NSMenuItem(
+            title: "Check for Updates…",
+            action: #selector(checkForUpdates),
+            keyEquivalent: ""
+        )
+        checkUpdates.target = self
+        menu.addItem(checkUpdates)
+        menu.addItem(.separator())
+
         let signOut = NSMenuItem(title: "Sign Out…", action: #selector(signOut), keyEquivalent: "")
         signOut.target = self
         menu.addItem(signOut)
@@ -165,6 +178,10 @@ final class MenuBarController {
 
     @objc private func signOut() {
         onSignOut?()
+    }
+
+    @objc private func checkForUpdates() {
+        onCheckForUpdates?()
     }
 
     // MARK: - Icons

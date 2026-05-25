@@ -34,19 +34,42 @@ final class SlapClassifier {
 
     // Tuning constants. Public so a settings UI can later drive them via a sensitivity slider.
     //
-    // 2026-05-22 retune: real-world slaps from Matthew measured well below the
-    // 1.06g floor we calibrated against — soft palm-rest slaps were missing
-    // entirely. Dropped to 1.04g (still ~8σ above the 0.005g idle drift) and
-    // widened the multi-slap window so a comfortable triple-tap rhythm of
-    // ~180ms between slaps fits with margin.
-    var slapThresholdG: Double = 1.025      // very forgiving; idle noise floor ≈ 1.0±0.005
-    var releaseThresholdG: Double = 1.015   // hysteresis: must dip below this to re-arm rising edge
+    // 2026-05-24 retune (third pass): the 1.025g threshold + 1.015g release was
+    // catching chassis ring (one slap → 3 counted) AND any general laptop
+    // motion (picking it up, shake → counted as slap). Two root causes:
+    //   1. Threshold too close to gravity baseline (1.0g) — shake oscillates
+    //      between ~0.85g and ~1.20g, easily clearing 1.025g.
+    //   2. Release threshold ABOVE gravity baseline — a slap rings the chassis
+    //      at ~30-50ms period, dipping briefly below 1.015g between peaks, so
+    //      the rising-edge detector re-armed and counted the next ring crest
+    //      as a separate slap.
+    // Fix: raise trigger above any plausible shake peak, and demand a real
+    // sub-gravity dip (chassis bouncing back / wrist lift) before re-arming.
+    // A genuine slap produces a brief free-fall-like dip; sustained shake does
+    // not, so this is also a slap-vs-shake discriminator.
+    // 2026-05-24 retune (fifth pass): user reported even firm slaps were not
+    // reaching 1.08g — actual palm-rest slaps peak ~1.02-1.05g on their Mac,
+    // so the meter showed motion but never tripped. Dropped trigger to 1.03g
+    // (just above idle drift floor of ~1.005g ± 0.005g). The sub-gravity
+    // release threshold (0.92g) remains the primary shake discriminator: a
+    // genuine slap rebounds the chassis below gravity for a frame; sustained
+    // shake oscillates near gravity but rarely dips that low.
+    var slapThresholdG: Double = 1.03       // soft tap reaches this; idle drift (~1.005g) does not
+    var releaseThresholdG: Double = 0.92    // sub-gravity dip = slap signature; shake stays above
     var windowSeconds: Double = 0.85        // 3 slaps at 250ms apart = 500ms + 350ms grace
-    var minInterSlapSeconds: Double = 0.10  // floor for counting two distinct slaps
-    var cooldownSeconds: Double = 0.15      // dead time after emit
+    var minInterSlapSeconds: Double = 0.22  // floor for counting two distinct slaps (was 0.10 — caught chassis ring)
+    var cooldownSeconds: Double = 0.20      // dead time after emit
     var maxCount: Int = 3
 
     var onSlap: ((SlapEvent) -> Void)?
+
+    /// Fires every time a slap is added to the in-progress count, BEFORE the
+    /// window closes and emit() runs. Used by the onboarding meter to show
+    /// "Slap 1 → Slap 2 → Slap 3" live as the user does them, instead of
+    /// waiting for the full window to expire. Passes (currentCount,
+    /// secondsRemainingInWindow). When window closes, fires once more with
+    /// count=0 and 0s so the UI can clear.
+    var onProgress: ((Int, TimeInterval) -> Void)?
 
     // State
     private var count: Int = 0
@@ -79,6 +102,10 @@ final class SlapClassifier {
         // Trigger only on a fresh rising edge while armed.
         guard armed && mag >= slapThresholdG else { return }
         armed = false
+        // Diagnostic — every rising-edge trigger prints regardless of whether
+        // it ends up counted. Lets the user see in Console.app whether their
+        // slap is even crossing the threshold (the most common bug class).
+        print(String(format: "[slap] edge mag=%.3fg count-so-far=%d", mag, count))
 
         if count == 0 {
             // First slap → start window
@@ -98,6 +125,8 @@ final class SlapClassifier {
             count = min(count + 1, maxCount)
             lastSlapAt = now
         }
+        let remaining = max(0, (firstSlapAt + windowSeconds) - now)
+        onProgress?(count, remaining)
     }
 
     private func scheduleEmit(at deadline: TimeInterval) {
@@ -113,7 +142,14 @@ final class SlapClassifier {
         guard count > 0 else { return }
         let event = SlapEvent(count: count, peakG: peakG, timestamp: firstSlapAt)
         lastEmitAt = firstSlapAt + windowSeconds
+        // Diagnostic — every classified cluster prints to Console.app. Lets a
+        // remote tester read off the peak g their slap actually produced so we
+        // can retune the threshold per-hardware without guessing.
+        print(String(format: "[slap] count=%d peakG=%.3f (threshold=%.2fg release=%.2fg)",
+                     event.count, event.peakG, slapThresholdG, releaseThresholdG))
         reset()
+        // Tell the meter the window closed so it can clear "Slap N" indicator.
+        onProgress?(0, 0)
         onSlap?(event)
     }
 
