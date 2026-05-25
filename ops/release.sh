@@ -143,11 +143,15 @@ if [ -n "$SPARKLE_BIN" ]; then
     echo "Drop this <item> into web/public/appcast.xml (above the others):"
     echo ""
     PUB_DATE="$(date -u +"%a, %d %b %Y %H:%M:%S +0000")"
+    # Sparkle compares sparkle:version against the running app's CFBundleVersion
+    # (the build number, NOT the marketing string). Read it from project.yml so
+    # the appcast stays in lockstep.
+    BUILD_NUM="$(grep -E '^\s*CURRENT_PROJECT_VERSION:' "$APP_DIR/project.yml" | head -1 | awk '{print $2}' | tr -d '\"')"
     cat <<EOF
         <item>
             <title>$VERSION</title>
             <pubDate>$PUB_DATE</pubDate>
-            <sparkle:version>$VERSION</sparkle:version>
+            <sparkle:version>$BUILD_NUM</sparkle:version>
             <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <description><![CDATA[
