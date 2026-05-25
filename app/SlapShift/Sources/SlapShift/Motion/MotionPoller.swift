@@ -52,6 +52,43 @@ enum MotionError: LocalizedError {
 
 final class MotionPoller {
 
+    /// Canonical macOS Input Monitoring permission status. Mirrors what the
+    /// user sees in System Settings → Privacy & Security → Input Monitoring.
+    ///
+    /// We previously inferred permission from whether `IOHIDDeviceOpen`
+    /// succeeded at app launch, but that is unreliable: on machines where a
+    /// prior build of SlapShift had been authorized (or where macOS cached
+    /// a grant against the bundle ID + signature), `IOHIDDeviceOpen` returns
+    /// `kIOReturnSuccess` *before* the user has ever toggled the checkbox
+    /// for the current install, so onboarding would show "Permission
+    /// granted" instantly without the user doing anything. The right
+    /// question is "does the OS say we have Listen access?", and the API
+    /// for that question is `IOHIDCheckAccess(.listenEvent)`.
+    enum PermissionStatus {
+        case granted
+        case denied
+        case notDetermined
+    }
+
+    static func permissionStatus() -> PermissionStatus {
+        // IOHIDAccessType is a typealias for UInt32, not a Swift enum, so
+        // the switch needs a plain `default:` rather than `@unknown default:`.
+        switch IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) {
+        case kIOHIDAccessTypeGranted:      return .granted
+        case kIOHIDAccessTypeDenied:       return .denied
+        default:                           return .notDetermined
+        }
+    }
+
+    /// Provoke the OS permission prompt. Safe to call repeatedly — macOS
+    /// only shows the dialog the first time per install, and never re-prompts
+    /// after the user has answered. Returns true if access is granted right
+    /// now (same as `permissionStatus() == .granted`).
+    @discardableResult
+    static func requestPermission() -> Bool {
+        return IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
+    }
+
     var onSample: ((MotionSample) -> Void)?
 
     private var device: IOHIDDevice?

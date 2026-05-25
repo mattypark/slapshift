@@ -29,18 +29,15 @@ const GRACE_DAYS = 30;
 export async function POST(req: Request) {
   const ip = clientIp(req);
 
-  // failOpen: true here is intentional. This endpoint is the Mac app's
-  // periodic heartbeat — a Supabase blip causing a 429 would erroneously
-  // start the 30-day grace clock on legit users. The underlying action
-  // is already cryptographically gated (the request must HMAC-match a
-  // 140-bit key in the DB), so a brief loss of rate-limiting can't be
-  // abused for brute force. Checkout + profile stay fail-CLOSED.
+  // Heartbeat from the Mac app. Rate-limit floor exists only to stop a
+  // buggy app build from hammering the endpoint — the action is already
+  // HMAC-gated (140-bit key entropy) so brute-force is infeasible.
+  // Default failOpen=true is correct here; no override needed.
   const rl = await checkRateLimit({
     ip,
     endpoint: "license_validate",
     limit: 10,
     windowSeconds: 60,
-    failOpen: true,
   });
   if (!rl.ok) {
     return NextResponse.json({ ok: false, reason: "rate_limited" }, { status: 429 });

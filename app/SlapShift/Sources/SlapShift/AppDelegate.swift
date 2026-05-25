@@ -37,6 +37,14 @@ let motionMonitor = MotionMonitor()
         set { UserDefaults.standard.set(newValue, forKey: Self.onboardingCompleteKey) }
     }
 
+    /// UserDefaults — last onboarding step the user was on. Persisted so that
+    /// when macOS force-quits + relaunches after the Input Monitoring grant,
+    /// the user lands back on the permission step (now showing "granted")
+    /// instead of being thrown back to the welcome screen. Stored as rawValue
+    /// so the enum can grow without breaking older installs (unknown values
+    /// fall back to .welcome via Step(rawValue:) returning nil).
+    private static let onboardingStepKey = "onboarding.step"
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("== SlapShift launched ==")
         // Install a minimal main menu so standard text-editing shortcuts
@@ -321,13 +329,24 @@ let motionMonitor = MotionMonitor()
         // keeps the monitor's lifecycle owned by AppDelegate.
         state.motionMonitor = motionMonitor
 
-        // Permission step — open the pane, then poll motion.start() until it succeeds.
+        // Permission step — open the pane, then poll the OS until the
+        // Input Monitoring checkbox actually flips. We also fire
+        // IOHIDRequestAccess so macOS surfaces the system prompt the first
+        // time a fresh user lands here (otherwise the only way to grant
+        // is via the System Settings deep link).
         state.openInputMonitoringSettings = { [weak self] in
+            MotionPoller.requestPermission()
             self?.openInputMonitoringPane()
             self?.startPermissionPolling()
         }
-        // Reflect current permission state immediately — motion may already be running.
-        state.permissionGranted = motionRunning
+        // Initial state — ask the OS directly. We previously trusted
+        // `motionRunning` (a "did IOHIDDeviceOpen succeed at launch?" flag),
+        // but that returns true on machines where a prior signed build
+        // had already been authorized, so onboarding falsely showed
+        // "Permission granted" instantly before the user did anything.
+        // IOHIDCheckAccess is the same signal the System Settings panel
+        // reflects, so they agree by construction.
+        state.permissionGranted = (MotionPoller.permissionStatus() == .granted)
 
         // Paywall step — "Buy now" routes to Stripe Checkout in the user's
         // browser. Stripe's hosted page is the trusted payment surface, and
@@ -388,6 +407,30 @@ let motionMonitor = MotionMonitor()
             )
         }
 
+        // Restore the last step the user was on so a force-quit + relaunch
+        // (which macOS triggers after the Input Monitoring permission grant)
+        // doesn't dump the user back at .welcome. Never restore to .activated
+        // — that step is for the post-purchase celebration screen and only
+        // makes sense in the same session as the activation event; on a
+        // cold relaunch, onboardingComplete would already be true and we'd
+        // never enter this branch anyway.
+        let savedStepRaw = UserDefaults.standard.object(forKey: Self.onboardingStepKey) as? Int
+        if let raw = savedStepRaw,
+           let savedStep = OnboardingState.Step(rawValue: raw),
+           savedStep != .activated {
+            state.step = savedStep
+        }
+        // Persist on every step change. Cheap (one UserDefaults write per
+        // Continue tap) and the only reliable hook — SwiftUI step transitions
+        // happen via state.next()/back(), not a single call site we could
+        // wrap, so a Combine sink is the right seam.
+        state.$step
+            .dropFirst()  // ignore initial publish for the value we just set
+            .sink { newStep in
+                UserDefaults.standard.set(newStep.rawValue, forKey: Self.onboardingStepKey)
+            }
+            .store(in: &cancellables)
+
         onboardingState = state
         let finish: () -> Void = { [weak self] in
             self?.onboardingComplete = true
@@ -395,6 +438,10 @@ let motionMonitor = MotionMonitor()
             self?.onboardingState = nil
             self?.onboardingWindow = nil
             self?.stopPermissionPolling()
+            // Clear the step pointer so a future signOut → presentOnboarding
+            // cycle starts at .welcome cleanly. (signOut also removes the
+            // key, but covering both paths is the safe default.)
+            UserDefaults.standard.removeObject(forKey: Self.onboardingStepKey)
             // Once onboarding is done, re-evaluate whether the menu bar icon
             // should appear. It only appears once they ALSO have a license.
             self?.installMenuBarIfReady()
@@ -501,6 +548,7 @@ let motionMonitor = MotionMonitor()
         //    profile so the user can re-enter their email/usage cleanly.
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: Self.onboardingCompleteKey)
+        defaults.removeObject(forKey: Self.onboardingStepKey)
         defaults.removeObject(forKey: "onboarding.name")
         defaults.removeObject(forKey: "onboarding.email")
         defaults.removeObject(forKey: "onboarding.usage")
@@ -592,8 +640,18 @@ let motionMonitor = MotionMonitor()
         NSWorkspace.shared.open(url)
     }
 
-    /// Re-attempt motion.start() every 1.5s until it succeeds (user granted permission)
-    /// or onboarding ends. Cheap to poll — start() is a quick IOKit handshake.
+    /// Poll the OS Input Monitoring permission every 1.5s while onboarding is
+    /// on the permission step. Once the user flips the checkbox in System
+    /// Settings, IOHIDCheckAccess starts returning Granted and we (a) flip
+    /// the onboarding state so the UI advances, (b) start the motion poller
+    /// if it isn't already running, and (c) tear the timer down.
+    ///
+    /// Why we don't drive the poll loop with motion.start() like the old
+    /// code: motion.start() is a non-trivial IOKit handshake that can
+    /// succeed for the wrong reason (e.g. a cached grant on the bundle ID
+    /// from a previous build), which is exactly the bug that made onboarding
+    /// show "Permission granted" without the user doing anything. The OS
+    /// API is the single source of truth.
     private func startPermissionPolling() {
         stopPermissionPolling()
         permissionPollTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
@@ -606,18 +664,30 @@ let motionMonitor = MotionMonitor()
                     self?.stopPermissionPolling()
                     return
                 }
-                do {
-                    try self.motion.start()
-                    self.motionRunning = true
-                    if self.menuBarInstalled {
-                        self.menuBar.setState(.armed)
-                    }
-                    state.permissionGranted = true
-                    self.stopPermissionPolling()
-                    print("Onboarding: motion permission confirmed")
-                } catch {
+                guard MotionPoller.permissionStatus() == .granted else {
                     // Still waiting on the user — keep polling.
+                    return
                 }
+                // Permission just flipped on. If motion never started at
+                // app launch (the common case for a fresh install) bring
+                // it up now so the demo steps have a live sample stream.
+                if !self.motionRunning {
+                    do {
+                        try self.motion.start()
+                        self.motionRunning = true
+                        if self.menuBarInstalled {
+                            self.menuBar.setState(.armed)
+                        }
+                    } catch {
+                        // Permission says granted but the IOKit open still
+                        // failed — surface to the menu bar but don't block
+                        // onboarding; the user clearly clicked the box.
+                        print("Onboarding: permission granted but motion.start() failed: \(error.localizedDescription)")
+                    }
+                }
+                state.permissionGranted = true
+                self.stopPermissionPolling()
+                print("Onboarding: motion permission confirmed")
             }
         }
     }

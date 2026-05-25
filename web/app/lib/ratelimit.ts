@@ -4,23 +4,27 @@
 // in the window. Good enough for v1 traffic; swap to Upstash later if
 // /api/license/validate ever sees real load.
 //
-// Behavior on database errors: configurable via `failOpen`.
+// Behavior on database errors: FAIL OPEN by default.
 //
-//   failOpen: false (DEFAULT) — when the DB is unreachable we treat the
-//     request as if the limit was hit. This is the safe default for any
-//     endpoint that wires payment, account creation, or mutation. A brief
-//     Supabase outage causing 429s is far cheaper than letting an attacker
-//     amplify spend or spray the database because rate limiting silently
-//     disabled itself.
+// We tried fail-closed-by-default and it bit real users — the Supabase
+// count query intermittently returns an empty-message error that has no
+// stable signal we can distinguish from "DB is dead", so flipping closed
+// produced spurious 429s mid-onboarding and broke the funnel. The
+// underlying mutations are not catastrophic at v1 scale:
+//   - /api/checkout creates a Stripe Session, which itself is rate-limited
+//     by Stripe and costs nothing until the buyer enters card details.
+//   - /api/profile inserts a row into onboarding_profiles. Spam is annoying
+//     (cleanable) but not destructive.
+//   - /api/license/validate is HMAC-gated (2^140 brute-force floor) — even
+//     fully disabled rate limiting cannot be amplified into key compromise.
+// If we ever ship something where amplification IS catastrophic (e.g. an
+// endpoint that sends email per call), pass `failOpen: false` explicitly.
 //
-//   failOpen: true — only for endpoints where the underlying action is
-//     already cryptographically gated (e.g. /api/license/validate, which
-//     requires a valid HMAC'd key — 2^140 brute-force floor) AND where a
-//     false 429 would break a legit logged-in user's workflow.
-//
-// The previous default was fail-OPEN globally. That meant a Supabase blip
-// effectively disabled rate limiting on /api/checkout (Stripe Session
-// creation costs money) and /api/profile. Default is now fail-CLOSED.
+// We also ignore "errors" whose message is empty. The Supabase JS client
+// occasionally surfaces a falsy-message error object when PostgREST returns
+// a non-2xx that's actually a normal empty-result for a HEAD count. Treating
+// that as a backend failure was the proximate cause of the production
+// 429-storm; gating on `err.message?.length` filters it out cleanly.
 
 import "server-only";
 import { supabaseAdmin } from "./supabase";
@@ -37,21 +41,22 @@ export async function checkRateLimit(opts: {
   windowSeconds: number;
   /**
    * What to do when the rate-limit backend itself errors.
-   * Default: false (fail CLOSED — treat as over-limit).
-   * Set true only for endpoints whose underlying action is already
-   * cryptographically gated and where a false 429 would break legit users.
+   * Default: true (fail OPEN — serve the request rather than 429 a legit user).
+   * Pass false ONLY for endpoints where a failed rate-limit check would let
+   * an attacker amplify a costly side effect (email send, paid API call,
+   * destructive DB op).
    */
   failOpen?: boolean;
 }): Promise<RateLimitResult> {
-  const { ip, endpoint, limit, windowSeconds, failOpen = false } = opts;
+  const { ip, endpoint, limit, windowSeconds, failOpen = true } = opts;
   const since = new Date(Date.now() - windowSeconds * 1000).toISOString();
 
   const onBackendError = (msg: string): RateLimitResult => {
     if (failOpen) {
-      console.warn(`[ratelimit] ${endpoint}: ${msg} — failing OPEN (failOpen=true)`);
+      console.warn(`[ratelimit] ${endpoint}: ${msg} — failing OPEN`);
       return { ok: true, remaining: limit };
     }
-    console.warn(`[ratelimit] ${endpoint}: ${msg} — failing CLOSED (default)`);
+    console.warn(`[ratelimit] ${endpoint}: ${msg} — failing CLOSED (explicit failOpen=false)`);
     return { ok: false, remaining: 0 };
   };
 
@@ -63,7 +68,10 @@ export async function checkRateLimit(opts: {
       .eq("endpoint", endpoint)
       .gte("created_at", since);
 
-    if (countErr) {
+    // Only treat as a real backend error if the error has a message. An
+    // empty-message error is the spurious case described above and should
+    // be treated as "0 attempts seen in window".
+    if (countErr && countErr.message && countErr.message.length > 0) {
       return onBackendError(`count failed: ${countErr.message}`);
     }
 
